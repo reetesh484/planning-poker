@@ -5,7 +5,7 @@ import CardDeck from './components/CardDeck.jsx';
 import ParticipantGrid from './components/ParticipantGrid.jsx';
 import ResultsPanel from './components/ResultsPanel.jsx';
 import HistoryDrawer from './components/HistoryDrawer.jsx';
-import { Eye, EyeOff, RotateCcw, Play, Sparkles, UserCheck, ArrowRight } from 'lucide-react';
+import { RotateCcw, Play, ArrowRight } from 'lucide-react';
 
 export default function App() {
   const [socket, setSocket] = useState(null);
@@ -18,7 +18,6 @@ export default function App() {
     if (paramRoom) return paramRoom.toLowerCase();
     const pathRoom = window.location.pathname.replace('/', '').trim();
     if (pathRoom && pathRoom.length > 2) return pathRoom.toLowerCase();
-    // Default room ID generator
     return 'room-' + Math.random().toString(36).substring(2, 7);
   });
 
@@ -35,9 +34,7 @@ export default function App() {
 
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
 
-  // Initialize Socket Connection
   useEffect(() => {
-    // Update URL query param without full page refresh so users can easily copy/share URL
     const currentUrl = new URL(window.location.href);
     if (currentUrl.searchParams.get('room') !== roomId) {
       currentUrl.searchParams.set('room', roomId);
@@ -128,19 +125,31 @@ export default function App() {
   const votedCount = voters.filter(p => p.vote !== null && p.vote !== undefined).length;
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col selection:bg-blue-600 selection:text-white">
+    <div className="min-h-screen bg-[#080b11] text-slate-100 flex flex-col selection:bg-curbiq-500 selection:text-white">
       
-      {/* User Name Entrance Modal */}
+      {/* CurbIQ Name Entrance Modal */}
       {!hasEnteredName && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md">
-          <div className="glass-panel w-full max-w-md rounded-3xl p-6 sm:p-8 border border-blue-500/30 shadow-2xl space-y-6 animate-scale-up">
-            <div className="text-center space-y-2">
-              <div className="h-12 w-12 mx-auto rounded-2xl bg-gradient-to-tr from-blue-600 to-indigo-500 flex items-center justify-center shadow-lg shadow-blue-500/30 text-white font-bold text-2xl">
-                ♠
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#080b11]/85 backdrop-blur-md">
+          <div className="glass-panel w-full max-w-md rounded-3xl p-6 sm:p-8 border border-curbiq-500/30 shadow-2xl space-y-6 animate-scale-up">
+            <div className="text-center space-y-3">
+              
+              {/* CurbIQ Logo Badge */}
+              <div className="inline-flex items-center gap-2.5 px-4 py-2 rounded-2xl bg-white text-slate-950 shadow-xl shadow-curbiq-500/30">
+                <svg width="28" height="28" viewBox="0 0 60 60" fill="none">
+                  <path d="M30 5C17.3 5 7 15.3 7 28C7 38.5 17.5 48.5 27 54.5C28.8 55.6 31.2 55.6 33 48.5C42.5 48.5 53 38.5 53 28C53 15.3 42.7 5 30 5Z" fill="#FF0055"/>
+                  <circle cx="30" cy="27" r="12" fill="#FFFFFF"/>
+                  <circle cx="30" cy="27" r="6" fill="#FF0055"/>
+                  <path d="M30 33L37 42H30V33Z" fill="#FFFFFF"/>
+                </svg>
+                <div className="flex items-baseline">
+                  <span className="font-extrabold text-xl tracking-tight text-slate-950">Curb</span>
+                  <span className="font-extrabold text-xl tracking-tight text-curbiq-500">IQ</span>
+                </div>
               </div>
-              <h2 className="text-xl font-bold text-white tracking-tight">Join Planning Poker</h2>
+
+              <h2 className="text-xl font-bold text-white tracking-tight">Planning Poker</h2>
               <p className="text-xs text-slate-400">
-                Enter your name to start story point estimation in room <strong className="text-blue-400 font-mono">{roomId}</strong>
+                Enter your display name to join room <strong className="text-curbiq-400 font-mono">{roomId}</strong>
               </p>
             </div>
 
@@ -156,13 +165,13 @@ export default function App() {
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                   placeholder="e.g. Alex, Sarah (Frontend), Dev 1"
-                  className="w-full bg-slate-950 border border-slate-800 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 text-sm text-slate-100 placeholder-slate-600 rounded-xl px-4 py-3 outline-none transition"
+                  className="w-full bg-slate-950 border border-slate-800 focus:border-curbiq-500 focus:ring-1 focus:ring-curbiq-500 text-sm text-slate-100 placeholder-slate-600 rounded-xl px-4 py-3 outline-none transition"
                 />
               </div>
 
               <button
                 type="submit"
-                className="w-full py-3 px-4 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-semibold text-sm shadow-lg shadow-blue-600/30 flex items-center justify-center gap-2 transition-all transform active:scale-95"
+                className="w-full py-3 px-4 rounded-xl bg-gradient-to-r from-curbiq-500 to-rose-600 hover:from-curbiq-600 hover:to-rose-700 text-white font-semibold text-sm shadow-lg shadow-curbiq-500/30 flex items-center justify-center gap-2 transition-all transform active:scale-95"
               >
                 <span>Enter Room</span>
                 <ArrowRight className="w-4 h-4" />
@@ -191,12 +200,12 @@ export default function App() {
           <main className="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6 space-y-6">
             
             {/* Primary Action Control Bar */}
-            <div className="glass-panel rounded-2xl p-4 sm:p-5 flex flex-col sm:flex-row items-center justify-between gap-4 border border-slate-800">
+            <div className="glass-panel rounded-2xl p-4 sm:p-5 flex flex-col sm:flex-row items-center justify-between gap-4 border border-slate-800/80">
               
               <div className="flex items-center gap-3">
-                <div className={`h-3 w-3 rounded-full ${connected ? 'bg-emerald-500 shadow-sm shadow-emerald-500/50' : 'bg-rose-500 animate-pulse'}`} />
+                <div className={`h-3 w-3 rounded-full ${connected ? 'bg-emerald-500 shadow-sm shadow-emerald-500/50' : 'bg-curbiq-500 animate-pulse'}`} />
                 <span className="text-xs text-slate-300 font-medium">
-                  {connected ? `Connected as ${name}` : 'Connecting to local server...'}
+                  {connected ? `Connected as ${name}` : 'Connecting to CurbIQ server...'}
                 </span>
               </div>
 
@@ -218,7 +227,7 @@ export default function App() {
                 ) : (
                   <button
                     onClick={handleResetRound}
-                    className="flex-1 sm:flex-initial px-6 py-2.5 rounded-xl font-bold text-sm bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white shadow-lg shadow-blue-600/30 border border-blue-400/30 flex items-center justify-center gap-2 transition-all transform active:scale-95"
+                    className="flex-1 sm:flex-initial px-6 py-2.5 rounded-xl font-bold text-sm bg-gradient-to-r from-curbiq-500 to-rose-600 hover:from-curbiq-600 hover:to-rose-700 text-white shadow-lg shadow-curbiq-500/30 border border-curbiq-400/30 flex items-center justify-center gap-2 transition-all transform active:scale-95"
                   >
                     <RotateCcw className="w-4 h-4" />
                     <span>Next Story / Reset</span>
@@ -233,7 +242,7 @@ export default function App() {
               <ResultsPanel stats={roomState.stats} storyTitle={roomState.title} />
             )}
 
-            {/* Card Selection Bar (Minimal Click Story Points) */}
+            {/* Card Selection Bar */}
             <CardDeck
               deck={roomState.deck}
               selectedVote={currentVote}

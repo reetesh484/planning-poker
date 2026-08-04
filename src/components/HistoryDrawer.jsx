@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, Copy, Check, Trash2, Download, FileText, History as HistoryIcon } from 'lucide-react';
+import { X, Copy, Check, Trash2, FileText, History as HistoryIcon } from 'lucide-react';
 
 export default function HistoryDrawer({ isOpen, onClose, history, onClearHistory }) {
   const [copied, setCopied] = useState(false);
@@ -10,7 +10,7 @@ export default function HistoryDrawer({ isOpen, onClose, history, onClearHistory
     if (!history || history.length === 0) return;
 
     const formattedText = history
-      .map((item, idx) => `${item.title}: ${item.finalPoints} SP (Avg: ${item.rawAverage})`)
+      .map((item) => `${item.title}: ${item.finalPoints} SP (Avg: ${item.rawAverage})`)
       .join('\n');
 
     navigator.clipboard.writeText(formattedText);
@@ -25,12 +25,12 @@ export default function HistoryDrawer({ isOpen, onClose, history, onClearHistory
         {/* Header */}
         <div className="px-5 py-4 border-b border-slate-800 flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <HistoryIcon className="w-5 h-5 text-blue-400" />
+            <HistoryIcon className="w-5 h-5 text-curbiq-400" />
             <h2 className="text-base font-bold text-white">Estimation History</h2>
           </div>
           <button
             onClick={onClose}
-            className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition"
+            className="p-1.5 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800 transition"
           >
             <X className="w-5 h-5" />
           </button>
@@ -46,7 +46,7 @@ export default function HistoryDrawer({ isOpen, onClose, history, onClearHistory
                 ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40'
                 : !history || history.length === 0
                 ? 'bg-slate-800/50 text-slate-600 border border-slate-800 cursor-not-allowed'
-                : 'bg-blue-600 hover:bg-blue-500 text-white shadow-lg shadow-blue-600/30'
+                : 'bg-gradient-to-r from-curbiq-500 to-rose-600 hover:from-curbiq-600 hover:to-rose-700 text-white shadow-lg shadow-curbiq-500/30'
             }`}
           >
             {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
@@ -92,7 +92,7 @@ export default function HistoryDrawer({ isOpen, onClose, history, onClearHistory
                     </p>
                   </div>
                   <div className="text-right shrink-0">
-                    <div className="px-2.5 py-1 rounded-lg bg-blue-600/20 text-blue-300 border border-blue-500/30 text-sm font-bold">
+                    <div className="px-2.5 py-1 rounded-lg bg-curbiq-600/20 text-curbiq-300 border border-curbiq-500/30 text-sm font-bold">
                       {item.finalPoints} SP
                     </div>
                     <span className="text-[10px] text-slate-500 block mt-1">

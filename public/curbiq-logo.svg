@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 60" fill="none">
+  <!-- CurbIQ Icon Pin -->
+  <path d="M30 5C17.2975 5 7 15.2975 7 28C7 38.5 17.5 48.5 27 54.5C28.8 55.6 31.2 55.6 33 48.5C42.5 48.5 53 38.5 53 28C53 15.2975 42.7025 5 30 5Z" fill="#FF0055"/>
+  <!-- Q Inner cutout -->
+  <circle cx="30" cy="27" r="12" fill="#FFFFFF"/>
+  <circle cx="30" cy="27" r="6" fill="#FF0055"/>
+  <!-- Q Tail cutout -->
+  <path d="M30 33L37 42H30V33Z" fill="#FFFFFF"/>
+  <!-- CurbIQ Wordmark -->
+  <text x="65" y="38" font-family="Inter, system-ui, -apple-system, sans-serif" font-weight="800" font-size="28" fill="#FFFFFF" letter-spacing="-0.5">Curb<tspan font-weight="800" fill="#FFFFFF">IQ</tspan></text>
+</svg>
