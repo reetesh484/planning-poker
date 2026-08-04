@@ -1,0 +1,266 @@
+import React, { useState, useEffect } from 'react';
+import { io } from 'socket.io-client';
+import Header from './components/Header.jsx';
+import CardDeck from './components/CardDeck.jsx';
+import ParticipantGrid from './components/ParticipantGrid.jsx';
+import ResultsPanel from './components/ResultsPanel.jsx';
+import HistoryDrawer from './components/HistoryDrawer.jsx';
+import { Eye, EyeOff, RotateCcw, Play, Sparkles, UserCheck, ArrowRight } from 'lucide-react';
+
+export default function App() {
+  const [socket, setSocket] = useState(null);
+  const [connected, setConnected] = useState(false);
+  const [name, setName] = useState(() => localStorage.getItem('poker_user_name') || '');
+  const [hasEnteredName, setHasEnteredName] = useState(() => !!localStorage.getItem('poker_user_name'));
+  const [roomId, setRoomId] = useState(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const paramRoom = urlParams.get('room');
+    if (paramRoom) return paramRoom.toLowerCase();
+    const pathRoom = window.location.pathname.replace('/', '').trim();
+    if (pathRoom && pathRoom.length > 2) return pathRoom.toLowerCase();
+    // Default room ID generator
+    return 'room-' + Math.random().toString(36).substring(2, 7);
+  });
+
+  const [roomState, setRoomState] = useState({
+    id: roomId,
+    title: '',
+    includeHalfPoints: false,
+    deck: [0.5, 1, 2, 3, 4, 5, 6, '?', '☕'],
+    revealed: false,
+    participants: [],
+    stats: null,
+    history: []
+  });
+
+  const [isHistoryOpen, setIsHistoryOpen] = useState(false);
+
+  // Initialize Socket Connection
+  useEffect(() => {
+    // Update URL query param without full page refresh so users can easily copy/share URL
+    const currentUrl = new URL(window.location.href);
+    if (currentUrl.searchParams.get('room') !== roomId) {
+      currentUrl.searchParams.set('room', roomId);
+      window.history.replaceState({}, '', currentUrl.toString());
+    }
+
+    const newSocket = io({
+      transports: ['websocket', 'polling'],
+      reconnectionAttempts: 10,
+    });
+
+    setSocket(newSocket);
+
+    newSocket.on('connect', () => {
+      setConnected(true);
+      if (hasEnteredName && name.trim()) {
+        newSocket.emit('join_room', {
+          roomId,
+          name: name.trim(),
+          isObserver: false
+        });
+      }
+    });
+
+    newSocket.on('disconnect', () => {
+      setConnected(false);
+    });
+
+    newSocket.on('room_state', (state) => {
+      setRoomState(state);
+    });
+
+    return () => {
+      newSocket.disconnect();
+    };
+  }, [roomId, hasEnteredName]);
+
+  const handleNameSubmit = (e) => {
+    e.preventDefault();
+    if (!name.trim()) return;
+    localStorage.setItem('poker_user_name', name.trim());
+    setHasEnteredName(true);
+    if (socket && socket.connected) {
+      socket.emit('join_room', {
+        roomId,
+        name: name.trim(),
+        isObserver: false
+      });
+    }
+  };
+
+  const handleCastVote = (voteVal) => {
+    if (socket) {
+      socket.emit('cast_vote', { vote: voteVal });
+    }
+  };
+
+  const handleRevealCards = () => {
+    if (socket) {
+      socket.emit('reveal_votes');
+    }
+  };
+
+  const handleResetRound = () => {
+    if (socket) {
+      socket.emit('reset_round', { saveToHistory: true });
+    }
+  };
+
+  const handleUpdateTitle = (newTitle) => {
+    if (socket) {
+      socket.emit('update_title', { title: newTitle });
+    }
+  };
+
+  const handleToggleHalfPoints = () => {
+    if (socket) {
+      socket.emit('toggle_half_points', { includeHalfPoints: !roomState.includeHalfPoints });
+    }
+  };
+
+  const currentUser = roomState.participants.find(p => p.id === socket?.id);
+  const isObserver = currentUser?.isObserver || false;
+  const currentVote = currentUser?.vote;
+
+  const voters = roomState.participants.filter(p => !p.isObserver);
+  const votersCount = voters.length;
+  const votedCount = voters.filter(p => p.vote !== null && p.vote !== undefined).length;
+
+  return (
+    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col selection:bg-blue-600 selection:text-white">
+      
+      {/* User Name Entrance Modal */}
+      {!hasEnteredName && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md">
+          <div className="glass-panel w-full max-w-md rounded-3xl p-6 sm:p-8 border border-blue-500/30 shadow-2xl space-y-6 animate-scale-up">
+            <div className="text-center space-y-2">
+              <div className="h-12 w-12 mx-auto rounded-2xl bg-gradient-to-tr from-blue-600 to-indigo-500 flex items-center justify-center shadow-lg shadow-blue-500/30 text-white font-bold text-2xl">
+                ♠
+              </div>
+              <h2 className="text-xl font-bold text-white tracking-tight">Join Planning Poker</h2>
+              <p className="text-xs text-slate-400">
+                Enter your name to start story point estimation in room <strong className="text-blue-400 font-mono">{roomId}</strong>
+              </p>
+            </div>
+
+            <form onSubmit={handleNameSubmit} className="space-y-4">
+              <div>
+                <label className="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1.5">
+                  Your Display Name
+                </label>
+                <input
+                  type="text"
+                  required
+                  autoFocus
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  placeholder="e.g. Alex, Sarah (Frontend), Dev 1"
+                  className="w-full bg-slate-950 border border-slate-800 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 text-sm text-slate-100 placeholder-slate-600 rounded-xl px-4 py-3 outline-none transition"
+                />
+              </div>
+
+              <button
+                type="submit"
+                className="w-full py-3 px-4 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-semibold text-sm shadow-lg shadow-blue-600/30 flex items-center justify-center gap-2 transition-all transform active:scale-95"
+              >
+                <span>Enter Room</span>
+                <ArrowRight className="w-4 h-4" />
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Main App Layout */}
+      {hasEnteredName && (
+        <>
+          <Header
+            roomId={roomState.id}
+            title={roomState.title}
+            onUpdateTitle={handleUpdateTitle}
+            isObserver={isObserver}
+            onToggleObserver={() => socket?.emit('toggle_observer', { isObserver: !isObserver })}
+            includeHalfPoints={roomState.includeHalfPoints}
+            onToggleHalfPoints={handleToggleHalfPoints}
+            historyCount={roomState.history ? roomState.history.length : 0}
+            onOpenHistory={() => setIsHistoryOpen(true)}
+            participantCount={roomState.participants.length}
+          />
+
+          <main className="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6 space-y-6">
+            
+            {/* Primary Action Control Bar */}
+            <div className="glass-panel rounded-2xl p-4 sm:p-5 flex flex-col sm:flex-row items-center justify-between gap-4 border border-slate-800">
+              
+              <div className="flex items-center gap-3">
+                <div className={`h-3 w-3 rounded-full ${connected ? 'bg-emerald-500 shadow-sm shadow-emerald-500/50' : 'bg-rose-500 animate-pulse'}`} />
+                <span className="text-xs text-slate-300 font-medium">
+                  {connected ? `Connected as ${name}` : 'Connecting to local server...'}
+                </span>
+              </div>
+
+              {/* Reveal & Reset Buttons */}
+              <div className="flex items-center gap-3 w-full sm:w-auto">
+                {!roomState.revealed ? (
+                  <button
+                    onClick={handleRevealCards}
+                    disabled={votedCount === 0}
+                    className={`flex-1 sm:flex-initial px-6 py-2.5 rounded-xl font-bold text-sm flex items-center justify-center gap-2 transition-all shadow-lg ${
+                      votedCount === 0
+                        ? 'bg-slate-800 text-slate-500 cursor-not-allowed border border-slate-800'
+                        : 'bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white shadow-emerald-600/30 border border-emerald-400/30 transform active:scale-95'
+                    }`}
+                  >
+                    <Play className="w-4 h-4 fill-current" />
+                    <span>Reveal Cards ({votedCount}/{votersCount})</span>
+                  </button>
+                ) : (
+                  <button
+                    onClick={handleResetRound}
+                    className="flex-1 sm:flex-initial px-6 py-2.5 rounded-xl font-bold text-sm bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white shadow-lg shadow-blue-600/30 border border-blue-400/30 flex items-center justify-center gap-2 transition-all transform active:scale-95"
+                  >
+                    <RotateCcw className="w-4 h-4" />
+                    <span>Next Story / Reset</span>
+                  </button>
+                )}
+              </div>
+
+            </div>
+
+            {/* Revealed Results Summary */}
+            {roomState.revealed && (
+              <ResultsPanel stats={roomState.stats} storyTitle={roomState.title} />
+            )}
+
+            {/* Card Selection Bar (Minimal Click Story Points) */}
+            <CardDeck
+              deck={roomState.deck}
+              selectedVote={currentVote}
+              onCastVote={handleCastVote}
+              isObserver={isObserver}
+              revealed={roomState.revealed}
+            />
+
+            {/* Participants Grid */}
+            <ParticipantGrid
+              participants={roomState.participants}
+              currentSocketId={socket?.id}
+              revealed={roomState.revealed}
+            />
+
+          </main>
+
+          {/* Session History Drawer */}
+          <HistoryDrawer
+            isOpen={isHistoryOpen}
+            onClose={() => setIsHistoryOpen(false)}
+            history={roomState.history}
+            onClearHistory={() => socket?.emit('clear_history')}
+          />
+        </>
+      )}
+
+    </div>
+  );
+}
