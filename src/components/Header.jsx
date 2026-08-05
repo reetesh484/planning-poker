@@ -69,8 +69,8 @@ export default function Header({
             <div>
               <h1 className="text-base font-bold text-white tracking-tight flex items-center gap-2">
                 Planning Poker
-                <span className="text-[11px] font-medium px-2 py-0.5 rounded-full bg-rose-500/10 text-rose-400 border border-rose-500/20">
-                  {participantCount} online
+                <span className="text-[10px] sm:text-[11px] font-medium px-2 py-0.5 rounded-full bg-rose-500/10 text-rose-400 border border-rose-500/20 whitespace-nowrap shrink-0">
+                  {participantCount} <span className="hidden sm:inline">online</span><span className="sm:hidden">on</span>
                 </span>
               </h1>
               <p className="text-xs text-slate-400 font-mono">
@@ -203,7 +203,7 @@ export default function Header({
             )}
           </div>
           <p className="text-[11px] text-slate-500 mt-1.5 px-1">
-            Ticket IDs like <span className="font-mono text-slate-400">PROJ-101</span> in story titles will become clickable links → <span className="font-mono text-slate-400">https://yourcompany.atlassian.net/browse/PROJ-101</span>
+            Provide a sample ticket URL like <span className="font-mono text-slate-400">https://yourcompany.atlassian.net/browse/CURBIQ-8999</span>. Ticket IDs from history titles will replace only the ticket segment.
           </p>
         </div>
       )}

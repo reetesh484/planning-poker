@@ -199,9 +199,9 @@ export default function App() {
 
             {/* Control Bar */}
             <div className="glass-panel rounded-2xl p-4 sm:p-5 flex flex-col sm:flex-row items-center justify-between gap-4 border border-slate-800/80">
-              <div className="flex items-center gap-3">
+              <div className="flex items-center gap-3 min-w-0 w-full sm:w-auto">
                 <div className={`h-3 w-3 rounded-full ${connected ? 'bg-emerald-500 shadow-sm shadow-emerald-500/50' : 'bg-rose-500 animate-pulse'}`} />
-                <span className="text-xs text-slate-300 font-medium">
+                <span className="text-xs text-slate-300 font-medium truncate">
                   {connected
                     ? <>{name}{roomState.roomName && <span className="text-slate-500 ml-1">· {roomState.roomName}</span>}</>
                     : 'Connecting to server...'}

@@ -5,31 +5,40 @@ import { X, Copy, Check, Trash2, FileText, History as HistoryIcon, ExternalLink 
 const JIRA_REGEX = /\b([A-Za-z][A-Za-z0-9]+-\d+)\b/g;
 const URL_REGEX = /\bhttps?:\/\/[^\s)]+/gi;
 
-function extractTickets(title) {
-  const tickets = [];
-  let match;
-  JIRA_REGEX.lastIndex = 0;
-  while ((match = JIRA_REGEX.exec(title)) !== null) {
-    tickets.push(match[1]);
-  }
-  return tickets;
+function extractFirstUrl(value) {
+  if (!value) return null;
+  URL_REGEX.lastIndex = 0;
+  const match = URL_REGEX.exec(value);
+  return match ? match[0] : null;
 }
 
-function extractFirstUrl(title) {
-  if (!title) return null;
-  URL_REGEX.lastIndex = 0;
-  const match = URL_REGEX.exec(title);
-  return match ? match[0] : null;
+function extractTicketFromText(value) {
+  if (!value) return null;
+  JIRA_REGEX.lastIndex = 0;
+  const match = JIRA_REGEX.exec(value);
+  return match ? match[1].toUpperCase() : null;
+}
+
+function buildTicketUrl(ticketId, jiraBaseUrl) {
+  if (!ticketId || !jiraBaseUrl) return null;
+
+  // If user provided a sample Jira ticket URL, replace only that ticket segment.
+  const sampleTicket = extractTicketFromText(jiraBaseUrl);
+  if (sampleTicket) {
+    return jiraBaseUrl.replace(new RegExp(sampleTicket, 'i'), ticketId.toUpperCase());
+  }
+
+  // Fallback for a plain Jira base host/path.
+  const normalizedBase = jiraBaseUrl.replace(/\/+$/, '');
+  return `${normalizedBase}/browse/${ticketId.toUpperCase()}`;
 }
 
 function buildStoryUrl(title, jiraBaseUrl) {
   const explicitUrl = extractFirstUrl(title);
   if (explicitUrl) return explicitUrl;
 
-  if (!jiraBaseUrl || !title) return null;
-  const tickets = extractTickets(title);
-  if (tickets.length === 0) return null;
-  return `${jiraBaseUrl}/browse/${tickets[0].toUpperCase()}`;
+  const ticket = extractTicketFromText(title);
+  return ticket ? buildTicketUrl(ticket, jiraBaseUrl) : null;
 }
 
 function renderTitleWithLinks(title, jiraBaseUrl) {
@@ -56,26 +65,31 @@ function renderTitleWithLinks(title, jiraBaseUrl) {
           target="_blank"
           rel="noopener noreferrer"
           className="inline-flex items-center gap-0.5 text-blue-400 hover:text-blue-300 underline decoration-dotted font-mono font-semibold transition-colors"
+          onClick={(e) => e.stopPropagation()}
         >
           {matchedUrl}
           <ExternalLink className="w-3 h-3" />
         </a>
       );
-    } else if (matchedTicketId && jiraBaseUrl) {
-      const ticketId = matchedTicketId.toUpperCase();
-      const url = `${jiraBaseUrl}/browse/${ticketId}`;
-      parts.push(
-        <a
-          key={`ticket-${match.index}`}
-          href={url}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="inline-flex items-center gap-0.5 text-blue-400 hover:text-blue-300 underline decoration-dotted font-mono font-semibold transition-colors"
-        >
-          {matchedTicketId}
-          <ExternalLink className="w-3 h-3" />
-        </a>
-      );
+    } else if (matchedTicketId) {
+      const url = buildTicketUrl(matchedTicketId, jiraBaseUrl);
+      if (url) {
+        parts.push(
+          <a
+            key={`ticket-${match.index}`}
+            href={url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-0.5 text-blue-400 hover:text-blue-300 underline decoration-dotted font-mono font-semibold transition-colors"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {matchedTicketId}
+            <ExternalLink className="w-3 h-3" />
+          </a>
+        );
+      } else {
+        parts.push(<span key={`raw-${match.index}`}>{match[0]}</span>);
+      }
     } else {
       parts.push(<span key={`raw-${match.index}`}>{match[0]}</span>);
     }
@@ -84,7 +98,7 @@ function renderTitleWithLinks(title, jiraBaseUrl) {
   }
 
   if (lastIndex < title.length) {
-    parts.push(<span key={`txt-end`}>{title.slice(lastIndex)}</span>);
+    parts.push(<span key="txt-end">{title.slice(lastIndex)}</span>);
   }
 
   return parts.length > 0 ? <>{parts}</> : <span>{title}</span>;
@@ -116,7 +130,6 @@ export default function HistoryDrawer({ isOpen, onClose, history, onClearHistory
     <div className="fixed inset-0 z-50 flex justify-end bg-slate-950/70 backdrop-blur-sm animate-fade-in">
       <div className="w-full max-w-md bg-slate-900 border-l border-slate-800 h-full flex flex-col shadow-2xl">
 
-        {/* Header */}
         <div className="px-5 py-4 border-b border-slate-800 flex items-center justify-between">
           <div className="flex items-center gap-2 min-w-0">
             <HistoryIcon className="w-5 h-5 text-rose-400 shrink-0" />
@@ -137,7 +150,6 @@ export default function HistoryDrawer({ isOpen, onClose, history, onClearHistory
           </button>
         </div>
 
-        {/* Action Bar */}
         <div className="px-5 py-3 border-b border-slate-800 bg-slate-950/50 flex items-center gap-2">
           <button
             onClick={handleCopyText}
@@ -165,17 +177,15 @@ export default function HistoryDrawer({ isOpen, onClose, history, onClearHistory
           )}
         </div>
 
-        {/* Jira banner */}
         {jiraBaseUrl && (
           <div className="px-5 py-2 bg-blue-500/5 border-b border-blue-500/20 flex items-center gap-2">
             <ExternalLink className="w-3.5 h-3.5 text-blue-400 shrink-0" />
             <p className="text-[11px] text-blue-300 truncate">
-              Ticket IDs link to <span className="font-mono">{jiraBaseUrl}</span>
+              Links are derived from sample Jira URL: <span className="font-mono">{jiraBaseUrl}</span>
             </p>
           </div>
         )}
 
-        {/* History List */}
         <div className="flex-1 overflow-y-auto p-5 space-y-3">
           {!history || history.length === 0 ? (
             <div className="text-center py-12 text-slate-500">
@@ -186,41 +196,58 @@ export default function HistoryDrawer({ isOpen, onClose, history, onClearHistory
               </p>
             </div>
           ) : (
-            history.map((item) => (
-              <div
-                key={item.id}
-                className="glass-card rounded-xl p-4 border border-slate-800 hover:border-slate-700 transition"
-              >
-                <div className="flex items-center justify-between gap-3">
-                  <div className="flex-1 min-w-0">
-                    <div className="text-sm font-semibold text-slate-100 leading-snug flex flex-wrap items-center gap-x-1">
-                      {renderTitleWithLinks(item.title, jiraBaseUrl)}
+            history.map((item) => {
+              const storyUrl = buildStoryUrl(item.title, jiraBaseUrl);
+              const cardContent = (
+                <>
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="flex-1 min-w-0">
+                      <div className="text-sm font-semibold text-slate-100 leading-snug flex flex-wrap items-center gap-x-1">
+                        {renderTitleWithLinks(item.title, jiraBaseUrl)}
+                      </div>
+                      {storyUrl && (
+                        <p className="inline-flex items-center gap-1 text-xs text-blue-400 mt-1 break-all">
+                          [{storyUrl}]
+                          <ExternalLink className="w-3 h-3 shrink-0" />
+                        </p>
+                      )}
+                      <p className="text-xs text-slate-500 mt-0.5 font-mono">
+                        {item.totalVotes} votes
+                      </p>
                     </div>
-                    {buildStoryUrl(item.title, jiraBaseUrl) && (
-                      <a
-                        href={buildStoryUrl(item.title, jiraBaseUrl)}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="inline-flex items-center gap-1 text-xs text-blue-400 hover:text-blue-300 underline decoration-dotted mt-1 break-all"
-                      >
-                        [{buildStoryUrl(item.title, jiraBaseUrl)}]
-                        <ExternalLink className="w-3 h-3 shrink-0" />
-                      </a>
-                    )}
-                    <p className="text-xs text-slate-500 mt-0.5 font-mono">
-                      {item.timestamp} · {item.totalVotes} votes
-                    </p>
+                    <div className="shrink-0 px-3 py-1.5 rounded-lg bg-rose-600/20 text-rose-300 border border-rose-500/30 text-sm font-bold">
+                      {item.finalPoints} SP
+                    </div>
                   </div>
-                  <div className="shrink-0 px-3 py-1.5 rounded-lg bg-rose-600/20 text-rose-300 border border-rose-500/30 text-sm font-bold">
-                    {item.finalPoints} SP
-                  </div>
+                </>
+              );
+
+              if (storyUrl) {
+                return (
+                  <a
+                    key={item.id}
+                    href={storyUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="block glass-card rounded-xl p-4 border border-blue-500/30 hover:border-blue-400/60 hover:bg-blue-500/5 transition cursor-pointer"
+                  >
+                    {cardContent}
+                  </a>
+                );
+              }
+
+              return (
+                <div
+                  key={item.id}
+                  className="glass-card rounded-xl p-4 border border-slate-800 hover:border-slate-700 transition"
+                >
+                  {cardContent}
                 </div>
-              </div>
-            ))
+              );
+            })
           )}
         </div>
 
-        {/* Footer: copy preview */}
         {history && history.length > 0 && (
           <div className="px-5 py-3 border-t border-slate-800 bg-slate-950/60">
             <p className="text-[11px] text-slate-500 text-center">

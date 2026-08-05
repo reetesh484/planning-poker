@@ -146,8 +146,7 @@ io.on('connection', (socket) => {
           id: Date.now().toString(36) + Math.random().toString(36).substring(2, 5),
           title: room.title.trim() || `Story #${room.history.length + 1}`,
           finalPoints: stats.finalPoints,
-          totalVotes: stats.totalVotes,
-          timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+          totalVotes: stats.totalVotes
         });
         room.savedThisRound = true;
       }
