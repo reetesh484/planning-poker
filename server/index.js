@@ -18,7 +18,6 @@ const io = new Server(httpServer, {
 });
 
 // In-memory Room State Store
-// rooms[roomId] = { id, title, includeHalfPoints, revealed, participants, history }
 const rooms = {};
 
 const DEFAULT_DECK = [0.5, 1, 2, 3, 4, 5, 6, '?', '☕'];
@@ -55,7 +54,7 @@ function calculateStats(participants) {
     }
   });
 
-  if (numericVotes.length === 0) {
+  if (validVotersCount === 0) {
     return {
       rawAverage: 0,
       finalPoints: 0,
@@ -63,24 +62,36 @@ function calculateStats(participants) {
       max: 0,
       median: 0,
       consensus: false,
-      totalVotes: validVotersCount,
-      dist
+      totalVotes: 0,
+      dist: {}
     };
   }
 
-  const sum = numericVotes.reduce((acc, v) => acc + v, 0);
-  const rawAverage = sum / numericVotes.length;
-  // User spec: Round up to nearest 0.5 (e.g. 3.2 -> 3.5, 3.8 -> 4.0)
-  const finalPoints = Math.ceil(rawAverage * 2) / 2;
+  let finalPoints = 0;
+  let rawAverage = 0;
+  let min = 0;
+  let max = 0;
+  let median = 0;
+  let consensus = false;
 
-  numericVotes.sort((a, b) => a - b);
-  const min = numericVotes[0];
-  const max = numericVotes[numericVotes.length - 1];
-  const mid = Math.floor(numericVotes.length / 2);
-  const median = numericVotes.length % 2 !== 0 
-    ? numericVotes[mid] 
-    : Math.ceil(((numericVotes[mid - 1] + numericVotes[mid]) / 2) * 2) / 2;
-  const consensus = min === max;
+  if (numericVotes.length > 0) {
+    const sum = numericVotes.reduce((acc, v) => acc + v, 0);
+    rawAverage = sum / numericVotes.length;
+    // Ceil to nearest 0.5 step
+    finalPoints = Math.ceil(rawAverage * 2) / 2;
+
+    numericVotes.sort((a, b) => a - b);
+    min = numericVotes[0];
+    max = numericVotes[numericVotes.length - 1];
+    const mid = Math.floor(numericVotes.length / 2);
+    median = numericVotes.length % 2 !== 0 
+      ? numericVotes[mid] 
+      : Math.ceil(((numericVotes[mid - 1] + numericVotes[mid]) / 2) * 2) / 2;
+    consensus = min === max;
+  } else {
+    // Non-numeric votes only
+    finalPoints = Object.keys(dist).join(', ');
+  }
 
   return {
     rawAverage: parseFloat(rawAverage.toFixed(2)),
@@ -89,7 +100,7 @@ function calculateStats(participants) {
     max,
     median,
     consensus,
-    totalVotes: numericVotes.length,
+    totalVotes: validVotersCount,
     dist
   };
 }
@@ -118,11 +129,9 @@ function sanitizeRoomState(room) {
 
 io.on('connection', (socket) => {
   let currentRoomId = null;
-  let currentUserId = null;
 
   socket.on('join_room', ({ roomId, name, isObserver }) => {
     currentRoomId = (roomId || 'default').toLowerCase().trim();
-    currentUserId = socket.id;
 
     socket.join(currentRoomId);
     const room = getOrCreateRoom(currentRoomId);
@@ -141,10 +150,9 @@ io.on('connection', (socket) => {
   socket.on('cast_vote', ({ vote }) => {
     if (!currentRoomId || !rooms[currentRoomId]) return;
     const room = rooms[currentRoomId];
-    if (room.revealed) return; // Prevent voting if already revealed
+    if (room.revealed) return;
 
     if (room.participants[socket.id]) {
-      // Toggle vote if clicking the same card again
       if (room.participants[socket.id].vote === vote) {
         room.participants[socket.id].vote = null;
       } else {
@@ -167,13 +175,13 @@ io.on('connection', (socket) => {
     if (!currentRoomId || !rooms[currentRoomId]) return;
     const room = rooms[currentRoomId];
 
-    if (saveToHistory && room.revealed) {
+    // Always save history if votes were cast in this round
+    if (saveToHistory) {
       const stats = calculateStats(room.participants);
       if (stats.totalVotes > 0) {
         const historyItem = {
           id: Date.now().toString(36) + Math.random().toString(36).substring(2, 5),
-          title: room.title.trim() || `Item #${room.history.length + 1}`,
-          rawAverage: stats.rawAverage,
+          title: room.title.trim() || `Story #${room.history.length + 1}`,
           finalPoints: stats.finalPoints,
           totalVotes: stats.totalVotes,
           timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
@@ -228,7 +236,6 @@ io.on('connection', (socket) => {
   socket.on('disconnect', () => {
     if (currentRoomId && rooms[currentRoomId] && rooms[currentRoomId].participants[socket.id]) {
       delete rooms[currentRoomId].participants[socket.id];
-      // Clean up empty rooms after 1 hour of inactivity
       if (Object.keys(rooms[currentRoomId].participants).length === 0) {
         setTimeout(() => {
           if (rooms[currentRoomId] && Object.keys(rooms[currentRoomId].participants).length === 0) {
@@ -242,7 +249,6 @@ io.on('connection', (socket) => {
   });
 });
 
-// Serve production static assets if built
 const distPath = path.join(__dirname, '../dist');
 app.use(express.static(distPath));
 

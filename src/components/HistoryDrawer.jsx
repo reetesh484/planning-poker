@@ -9,8 +9,10 @@ export default function HistoryDrawer({ isOpen, onClose, history, onClearHistory
   const handleCopyText = () => {
     if (!history || history.length === 0) return;
 
-    const formattedText = history
-      .map((item) => `${item.title}: ${item.finalPoints} SP (Avg: ${item.rawAverage})`)
+    // Clean format: "Title - X SP" only
+    const formattedText = [...history]
+      .reverse()
+      .map((item) => `${item.title} - ${item.finalPoints} SP`)
       .join('\n');
 
     navigator.clipboard.writeText(formattedText);
@@ -25,8 +27,13 @@ export default function HistoryDrawer({ isOpen, onClose, history, onClearHistory
         {/* Header */}
         <div className="px-5 py-4 border-b border-slate-800 flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <HistoryIcon className="w-5 h-5 text-curbiq-400" />
+            <HistoryIcon className="w-5 h-5 text-rose-400" />
             <h2 className="text-base font-bold text-white">Estimation History</h2>
+            {history && history.length > 0 && (
+              <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-rose-500/10 text-rose-400 border border-rose-500/20">
+                {history.length} stories
+              </span>
+            )}
           </div>
           <button
             onClick={onClose}
@@ -46,11 +53,11 @@ export default function HistoryDrawer({ isOpen, onClose, history, onClearHistory
                 ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40'
                 : !history || history.length === 0
                 ? 'bg-slate-800/50 text-slate-600 border border-slate-800 cursor-not-allowed'
-                : 'bg-gradient-to-r from-curbiq-500 to-rose-600 hover:from-curbiq-600 hover:to-rose-700 text-white shadow-lg shadow-curbiq-500/30'
+                : 'bg-gradient-to-r from-rose-600 to-rose-700 hover:from-rose-500 hover:to-rose-600 text-white shadow-lg shadow-rose-500/30'
             }`}
           >
             {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
-            <span>{copied ? 'Copied to Clipboard!' : 'Copy Text Export'}</span>
+            <span>{copied ? 'Copied!' : 'Copy All Results'}</span>
           </button>
 
           {history && history.length > 0 && (
@@ -71,7 +78,7 @@ export default function HistoryDrawer({ isOpen, onClose, history, onClearHistory
               <FileText className="w-10 h-10 mx-auto mb-3 text-slate-600 opacity-60" />
               <p className="text-sm font-medium">No history saved yet.</p>
               <p className="text-xs text-slate-600 mt-1">
-                Completed story point estimations will appear here automatically when resetting for the next story.
+                Completed rounds will appear here when you click "Next Story / Reset".
               </p>
             </div>
           ) : (
@@ -80,24 +87,17 @@ export default function HistoryDrawer({ isOpen, onClose, history, onClearHistory
                 key={item.id}
                 className="glass-card rounded-xl p-4 border border-slate-800 hover:border-slate-700 transition"
               >
-                <div className="flex items-start justify-between gap-3">
+                <div className="flex items-center justify-between gap-3">
                   <div className="flex-1 min-w-0">
                     <h4 className="text-sm font-semibold text-slate-100 truncate" title={item.title}>
                       {item.title}
                     </h4>
-                    <p className="text-xs text-slate-500 mt-1 flex items-center gap-2 font-mono">
-                      <span>{item.timestamp}</span>
-                      <span>•</span>
-                      <span>{item.totalVotes} votes</span>
+                    <p className="text-xs text-slate-500 mt-0.5 font-mono">
+                      {item.timestamp} · {item.totalVotes} votes
                     </p>
                   </div>
-                  <div className="text-right shrink-0">
-                    <div className="px-2.5 py-1 rounded-lg bg-curbiq-600/20 text-curbiq-300 border border-curbiq-500/30 text-sm font-bold">
-                      {item.finalPoints} SP
-                    </div>
-                    <span className="text-[10px] text-slate-500 block mt-1">
-                      Avg: {item.rawAverage}
-                    </span>
+                  <div className="shrink-0 px-3 py-1.5 rounded-lg bg-rose-600/20 text-rose-300 border border-rose-500/30 text-sm font-bold">
+                    {item.finalPoints} SP
                   </div>
                 </div>
               </div>
@@ -105,10 +105,12 @@ export default function HistoryDrawer({ isOpen, onClose, history, onClearHistory
           )}
         </div>
 
-        {/* Footer info */}
+        {/* Footer: Preview of copy format */}
         {history && history.length > 0 && (
-          <div className="px-5 py-3 border-t border-slate-800 bg-slate-950/60 text-center text-xs text-slate-500">
-            Export format is ready to paste directly into Slack or Jira.
+          <div className="px-5 py-3 border-t border-slate-800 bg-slate-950/60">
+            <p className="text-[11px] text-slate-500 text-center">
+              Copies as: <span className="text-slate-400 font-mono">Story Title - 3.5 SP</span>
+            </p>
           </div>
         )}
 

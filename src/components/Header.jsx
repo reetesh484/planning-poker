@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Check, Eye, EyeOff, History, Link as LinkIcon, Layers } from 'lucide-react';
 
 export default function Header({
@@ -14,6 +14,21 @@ export default function Header({
   participantCount
 }) {
   const [copied, setCopied] = useState(false);
+  const [localTitle, setLocalTitle] = useState(title || '');
+  const isFocused = useRef(false);
+
+  // Sync local title from roomState prop only when the user is not actively typing/focused
+  useEffect(() => {
+    if (!isFocused.current) {
+      setLocalTitle(title || '');
+    }
+  }, [title]);
+
+  const handleTitleChange = (e) => {
+    const newVal = e.target.value;
+    setLocalTitle(newVal);
+    onUpdateTitle(newVal);
+  };
 
   const handleCopyLink = () => {
     const url = window.location.href;
@@ -26,11 +41,10 @@ export default function Header({
     <header className="glass-panel sticky top-0 z-30 border-b border-slate-800/80 px-4 py-3 sm:px-6">
       <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
         
-        {/* Left: Minimal Logo Icon & Room Link */}
+        {/* Left: Brand Icon & Room Link */}
         <div className="flex items-center justify-between w-full md:w-auto gap-3">
           <div className="flex items-center gap-3">
             
-            {/* Sleek Minimal Brand Icon */}
             <div className="h-9 w-9 rounded-xl bg-[#FF0055] flex items-center justify-center shadow-lg shadow-rose-500/20 shrink-0">
               <svg width="22" height="22" viewBox="0 0 60 60" fill="none">
                 <path d="M30 5C17.3 5 7 15.3 7 28C7 38.5 17.5 48.5 27 54.5C28.8 55.6 31.2 55.6 33 48.5C42.5 48.5 53 38.5 53 28C53 15.3 42.7 5 30 5Z" fill="#FFFFFF"/>
@@ -68,13 +82,18 @@ export default function Header({
           </button>
         </div>
 
-        {/* Center: Story Title Input */}
+        {/* Center: Story Title Input (Fixed smooth typing without overwrite bug) */}
         <div className="w-full md:max-w-md">
           <div className="relative">
             <input
               type="text"
-              value={title || ''}
-              onChange={(e) => onUpdateTitle(e.target.value)}
+              value={localTitle}
+              onFocus={() => { isFocused.current = true; }}
+              onBlur={() => {
+                isFocused.current = false;
+                onUpdateTitle(localTitle);
+              }}
+              onChange={handleTitleChange}
               placeholder="Optional: Enter Story Title or Jira Ticket (e.g. PROJ-101 Search UI)..."
               className="w-full bg-slate-950/80 border border-slate-800 focus:border-rose-500 focus:ring-1 focus:ring-rose-500 text-sm text-slate-100 placeholder-slate-500 rounded-xl px-3.5 py-2 transition-all duration-150 outline-none"
             />
