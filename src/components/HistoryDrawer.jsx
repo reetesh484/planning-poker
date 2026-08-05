@@ -1,47 +1,96 @@
 import React, { useState } from 'react';
 import { X, Copy, Check, Trash2, FileText, History as HistoryIcon, ExternalLink } from 'lucide-react';
 
-// Regex: matches Jira-style ticket IDs like PROJ-101, CURB-42, ABC-1234
-const JIRA_TICKET_REGEX = /\b([A-Z][A-Z0-9]+-\d+)\b/g;
+// Matches Jira-style IDs: PROJ-101, curb-42, ABC-1234
+const JIRA_REGEX = /\b([A-Za-z][A-Za-z0-9]+-\d+)\b/g;
+const URL_REGEX = /\bhttps?:\/\/[^\s)]+/gi;
 
-function renderTitleWithJiraLinks(title, jiraBaseUrl) {
-  if (!jiraBaseUrl) return <span>{title}</span>;
+function extractTickets(title) {
+  const tickets = [];
+  let match;
+  JIRA_REGEX.lastIndex = 0;
+  while ((match = JIRA_REGEX.exec(title)) !== null) {
+    tickets.push(match[1]);
+  }
+  return tickets;
+}
+
+function extractFirstUrl(title) {
+  if (!title) return null;
+  URL_REGEX.lastIndex = 0;
+  const match = URL_REGEX.exec(title);
+  return match ? match[0] : null;
+}
+
+function buildStoryUrl(title, jiraBaseUrl) {
+  const explicitUrl = extractFirstUrl(title);
+  if (explicitUrl) return explicitUrl;
+
+  if (!jiraBaseUrl || !title) return null;
+  const tickets = extractTickets(title);
+  if (tickets.length === 0) return null;
+  return `${jiraBaseUrl}/browse/${tickets[0].toUpperCase()}`;
+}
+
+function renderTitleWithLinks(title, jiraBaseUrl) {
+  if (!title) return <span>{title}</span>;
 
   const parts = [];
   let lastIndex = 0;
   let match;
+  const regex = /(https?:\/\/[^\s)]+)|\b([A-Za-z][A-Za-z0-9]+-\d+)\b/gi;
 
-  JIRA_TICKET_REGEX.lastIndex = 0;
-  while ((match = JIRA_TICKET_REGEX.exec(title)) !== null) {
+  while ((match = regex.exec(title)) !== null) {
     if (match.index > lastIndex) {
-      parts.push(<span key={lastIndex}>{title.slice(lastIndex, match.index)}</span>);
+      parts.push(<span key={`txt-${lastIndex}`}>{title.slice(lastIndex, match.index)}</span>);
     }
-    const ticketId = match[1];
-    const url = `${jiraBaseUrl}/browse/${ticketId}`;
-    parts.push(
-      <a
-        key={match.index}
-        href={url}
-        target="_blank"
-        rel="noopener noreferrer"
-        className="inline-flex items-center gap-0.5 text-blue-400 hover:text-blue-300 hover:underline transition-colors font-mono font-semibold"
-        onClick={(e) => e.stopPropagation()}
-      >
-        {ticketId}
-        <ExternalLink className="w-3 h-3 inline-block" />
-      </a>
-    );
+
+    const matchedUrl = match[1];
+    const matchedTicketId = match[2];
+
+    if (matchedUrl) {
+      parts.push(
+        <a
+          key={`url-${match.index}`}
+          href={matchedUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-flex items-center gap-0.5 text-blue-400 hover:text-blue-300 underline decoration-dotted font-mono font-semibold transition-colors"
+        >
+          {matchedUrl}
+          <ExternalLink className="w-3 h-3" />
+        </a>
+      );
+    } else if (matchedTicketId && jiraBaseUrl) {
+      const ticketId = matchedTicketId.toUpperCase();
+      const url = `${jiraBaseUrl}/browse/${ticketId}`;
+      parts.push(
+        <a
+          key={`ticket-${match.index}`}
+          href={url}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-flex items-center gap-0.5 text-blue-400 hover:text-blue-300 underline decoration-dotted font-mono font-semibold transition-colors"
+        >
+          {matchedTicketId}
+          <ExternalLink className="w-3 h-3" />
+        </a>
+      );
+    } else {
+      parts.push(<span key={`raw-${match.index}`}>{match[0]}</span>);
+    }
+
     lastIndex = match.index + match[0].length;
   }
 
   if (lastIndex < title.length) {
-    parts.push(<span key={lastIndex}>{title.slice(lastIndex)}</span>);
+    parts.push(<span key={`txt-end`}>{title.slice(lastIndex)}</span>);
   }
 
-  return <>{parts}</>;
+  return parts.length > 0 ? <>{parts}</> : <span>{title}</span>;
 }
 
-export default function HistoryDrawer({ isOpen, onClose, history, onClearHistory, jiraBaseUrl }) {
+export default function HistoryDrawer({ isOpen, onClose, history, onClearHistory, jiraBaseUrl, roomName }) {
   const [copied, setCopied] = useState(false);
 
   if (!isOpen) return null;
@@ -49,12 +98,16 @@ export default function HistoryDrawer({ isOpen, onClose, history, onClearHistory
   const handleCopyText = () => {
     if (!history || history.length === 0) return;
 
-    const formattedText = [...history]
-      .reverse()
-      .map((item) => `${item.title} - ${item.finalPoints} SP`)
-      .join('\n');
+    const lines = [...history].reverse().map((item) => {
+      const storyUrl = buildStoryUrl(item.title, jiraBaseUrl);
+      if (storyUrl) {
+        return `${item.title} [${storyUrl}] -> ${item.finalPoints}`;
+      }
+      return `${item.title} -> ${item.finalPoints}`;
+    });
 
-    navigator.clipboard.writeText(formattedText);
+    const header = roomName ? `${roomName}\n` : '';
+    navigator.clipboard.writeText(header + lines.join('\n'));
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
@@ -62,28 +115,30 @@ export default function HistoryDrawer({ isOpen, onClose, history, onClearHistory
   return (
     <div className="fixed inset-0 z-50 flex justify-end bg-slate-950/70 backdrop-blur-sm animate-fade-in">
       <div className="w-full max-w-md bg-slate-900 border-l border-slate-800 h-full flex flex-col shadow-2xl">
-        
+
         {/* Header */}
         <div className="px-5 py-4 border-b border-slate-800 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <HistoryIcon className="w-5 h-5 text-rose-400" />
-            <h2 className="text-base font-bold text-white">Estimation History</h2>
+          <div className="flex items-center gap-2 min-w-0">
+            <HistoryIcon className="w-5 h-5 text-rose-400 shrink-0" />
+            <div className="min-w-0">
+              <h2 className="text-base font-bold text-white">Estimation History</h2>
+              {roomName && (
+                <p className="text-xs text-slate-400 truncate">{roomName}</p>
+              )}
+            </div>
             {history && history.length > 0 && (
-              <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-rose-500/10 text-rose-400 border border-rose-500/20">
+              <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-rose-500/10 text-rose-400 border border-rose-500/20 shrink-0">
                 {history.length} stories
               </span>
             )}
           </div>
-          <button
-            onClick={onClose}
-            className="p-1.5 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800 transition"
-          >
+          <button onClick={onClose} className="p-1.5 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800 transition shrink-0">
             <X className="w-5 h-5" />
           </button>
         </div>
 
         {/* Action Bar */}
-        <div className="px-5 py-3 border-b border-slate-800 bg-slate-950/50 flex items-center justify-between gap-2">
+        <div className="px-5 py-3 border-b border-slate-800 bg-slate-950/50 flex items-center gap-2">
           <button
             onClick={handleCopyText}
             disabled={!history || history.length === 0}
@@ -110,12 +165,12 @@ export default function HistoryDrawer({ isOpen, onClose, history, onClearHistory
           )}
         </div>
 
-        {/* Jira info banner if configured */}
+        {/* Jira banner */}
         {jiraBaseUrl && (
           <div className="px-5 py-2 bg-blue-500/5 border-b border-blue-500/20 flex items-center gap-2">
             <ExternalLink className="w-3.5 h-3.5 text-blue-400 shrink-0" />
-            <p className="text-[11px] text-blue-300">
-              Jira tickets are clickable — links to <span className="font-mono text-blue-200">{jiraBaseUrl}</span>
+            <p className="text-[11px] text-blue-300 truncate">
+              Ticket IDs link to <span className="font-mono">{jiraBaseUrl}</span>
             </p>
           </div>
         )}
@@ -127,7 +182,7 @@ export default function HistoryDrawer({ isOpen, onClose, history, onClearHistory
               <FileText className="w-10 h-10 mx-auto mb-3 text-slate-600 opacity-60" />
               <p className="text-sm font-medium">No history saved yet.</p>
               <p className="text-xs text-slate-600 mt-1">
-                Completed rounds will appear here when you click "Next Story / Reset".
+                History is saved automatically when you reveal cards.
               </p>
             </div>
           ) : (
@@ -138,9 +193,20 @@ export default function HistoryDrawer({ isOpen, onClose, history, onClearHistory
               >
                 <div className="flex items-center justify-between gap-3">
                   <div className="flex-1 min-w-0">
-                    <h4 className="text-sm font-semibold text-slate-100 leading-snug">
-                      {renderTitleWithJiraLinks(item.title, jiraBaseUrl)}
-                    </h4>
+                    <div className="text-sm font-semibold text-slate-100 leading-snug flex flex-wrap items-center gap-x-1">
+                      {renderTitleWithLinks(item.title, jiraBaseUrl)}
+                    </div>
+                    {buildStoryUrl(item.title, jiraBaseUrl) && (
+                      <a
+                        href={buildStoryUrl(item.title, jiraBaseUrl)}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1 text-xs text-blue-400 hover:text-blue-300 underline decoration-dotted mt-1 break-all"
+                      >
+                        [{buildStoryUrl(item.title, jiraBaseUrl)}]
+                        <ExternalLink className="w-3 h-3 shrink-0" />
+                      </a>
+                    )}
                     <p className="text-xs text-slate-500 mt-0.5 font-mono">
                       {item.timestamp} · {item.totalVotes} votes
                     </p>
@@ -154,15 +220,18 @@ export default function HistoryDrawer({ isOpen, onClose, history, onClearHistory
           )}
         </div>
 
-        {/* Footer */}
+        {/* Footer: copy preview */}
         {history && history.length > 0 && (
           <div className="px-5 py-3 border-t border-slate-800 bg-slate-950/60">
             <p className="text-[11px] text-slate-500 text-center">
-              Copies as: <span className="text-slate-400 font-mono">Story Title - 3.5 SP</span>
+              Export: <span className="font-mono text-slate-400">
+                {jiraBaseUrl
+                  ? 'PROJ-101 Title [https://jira.example.com/browse/PROJ-101] -> 3.5'
+                  : 'Story Title -> 3.5'}
+              </span>
             </p>
           </div>
         )}
-
       </div>
     </div>
   );

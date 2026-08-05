@@ -14,6 +14,7 @@ export default function Header({
   participantCount,
   jiraBaseUrl,
   onUpdateJiraBaseUrl,
+  roomName,
 }) {
   const [copied, setCopied] = useState(false);
   const [localTitle, setLocalTitle] = useState(title || '');
@@ -75,6 +76,11 @@ export default function Header({
               <p className="text-xs text-slate-400 font-mono">
                 Room: <span className="text-slate-200 font-semibold uppercase">{roomId}</span>
               </p>
+              {roomName && (
+                <p className="text-xs text-slate-500 truncate max-w-[240px]">
+                  {roomName}
+                </p>
+              )}
             </div>
           </div>
 

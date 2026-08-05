@@ -11,15 +11,10 @@ const app = express();
 const httpServer = createServer(app);
 
 const io = new Server(httpServer, {
-  cors: {
-    origin: '*',
-    methods: ['GET', 'POST']
-  }
+  cors: { origin: '*', methods: ['GET', 'POST'] }
 });
 
-// In-memory Room State Store
 const rooms = {};
-
 const DEFAULT_DECK = [0.5, 1, 2, 3, 4, 5, 6, '?', '☕'];
 const HALF_POINTS_DECK = [0.5, 1, 1.5, 2, 2.5, 3, 3.5, 4, 4.5, 5, 5.5, 6, '?', '☕'];
 
@@ -28,9 +23,11 @@ function getOrCreateRoom(roomId) {
   if (!rooms[cleanId]) {
     rooms[cleanId] = {
       id: cleanId,
+      roomName: '',
       title: '',
       includeHalfPoints: false,
       revealed: false,
+      savedThisRound: false, // prevents double-saving if reveal is clicked multiple times
       participants: {},
       history: []
     };
@@ -48,49 +45,24 @@ function calculateStats(participants) {
       validVotersCount++;
       dist[p.vote] = (dist[p.vote] || 0) + 1;
       const num = parseFloat(p.vote);
-      if (!isNaN(num)) {
-        numericVotes.push(num);
-      }
+      if (!isNaN(num)) numericVotes.push(num);
     }
   });
 
   if (validVotersCount === 0) {
-    return {
-      rawAverage: 0,
-      finalPoints: 0,
-      min: 0,
-      max: 0,
-      median: 0,
-      consensus: false,
-      totalVotes: 0,
-      dist: {}
-    };
+    return { rawAverage: 0, finalPoints: 0, min: 0, max: 0, consensus: false, totalVotes: 0, dist: {} };
   }
 
-  let finalPoints = 0;
-  let rawAverage = 0;
-  let min = 0;
-  let max = 0;
-  let median = 0;
-  let consensus = false;
+  let finalPoints = 0, rawAverage = 0, min = 0, max = 0, consensus = false;
 
   if (numericVotes.length > 0) {
-    const sum = numericVotes.reduce((acc, v) => acc + v, 0);
+    const sum = numericVotes.reduce((a, v) => a + v, 0);
     rawAverage = sum / numericVotes.length;
-    // Ceil to nearest 0.5 step
     finalPoints = Math.ceil(rawAverage * 2) / 2;
-
     numericVotes.sort((a, b) => a - b);
     min = numericVotes[0];
     max = numericVotes[numericVotes.length - 1];
-    const mid = Math.floor(numericVotes.length / 2);
-    median = numericVotes.length % 2 !== 0 
-      ? numericVotes[mid] 
-      : Math.ceil(((numericVotes[mid - 1] + numericVotes[mid]) / 2) * 2) / 2;
     consensus = min === max;
-  } else {
-    // Non-numeric votes only
-    finalPoints = Object.keys(dist).join(', ');
   }
 
   return {
@@ -98,7 +70,6 @@ function calculateStats(participants) {
     finalPoints,
     min,
     max,
-    median,
     consensus,
     totalVotes: validVotersCount,
     dist
@@ -111,6 +82,7 @@ function sanitizeRoomState(room) {
 
   return {
     id: room.id,
+    roomName: room.roomName || '',
     title: room.title,
     includeHalfPoints: room.includeHalfPoints,
     deck: activeDeck,
@@ -130,11 +102,15 @@ function sanitizeRoomState(room) {
 io.on('connection', (socket) => {
   let currentRoomId = null;
 
-  socket.on('join_room', ({ roomId, name, isObserver }) => {
+  socket.on('join_room', ({ roomId, name, isObserver, roomName }) => {
     currentRoomId = (roomId || 'default').toLowerCase().trim();
-
     socket.join(currentRoomId);
     const room = getOrCreateRoom(currentRoomId);
+
+    // Room name is optional and treated as room-level metadata.
+    if (!room.roomName && typeof roomName === 'string' && roomName.trim()) {
+      room.roomName = roomName.trim();
+    }
 
     room.participants[socket.id] = {
       id: socket.id,
@@ -143,7 +119,6 @@ io.on('connection', (socket) => {
       isObserver: !!isObserver,
       isConnected: true
     };
-
     io.to(currentRoomId).emit('room_state', sanitizeRoomState(room));
   });
 
@@ -151,15 +126,10 @@ io.on('connection', (socket) => {
     if (!currentRoomId || !rooms[currentRoomId]) return;
     const room = rooms[currentRoomId];
     if (room.revealed) return;
-
     if (room.participants[socket.id]) {
-      if (room.participants[socket.id].vote === vote) {
-        room.participants[socket.id].vote = null;
-      } else {
-        room.participants[socket.id].vote = vote;
-      }
+      room.participants[socket.id].vote =
+        room.participants[socket.id].vote === vote ? null : vote;
     }
-
     io.to(currentRoomId).emit('room_state', sanitizeRoomState(room));
   });
 
@@ -168,50 +138,48 @@ io.on('connection', (socket) => {
     const room = rooms[currentRoomId];
     room.revealed = true;
 
-    io.to(currentRoomId).emit('room_state', sanitizeRoomState(room));
-  });
-
-  socket.on('reset_round', ({ saveToHistory = true } = {}) => {
-    if (!currentRoomId || !rooms[currentRoomId]) return;
-    const room = rooms[currentRoomId];
-
-    // Always save history if votes were cast in this round
-    if (saveToHistory) {
+    // Save to history on reveal (only once per round)
+    if (!room.savedThisRound) {
       const stats = calculateStats(room.participants);
       if (stats.totalVotes > 0) {
-        const historyItem = {
+        room.history.unshift({
           id: Date.now().toString(36) + Math.random().toString(36).substring(2, 5),
           title: room.title.trim() || `Story #${room.history.length + 1}`,
           finalPoints: stats.finalPoints,
           totalVotes: stats.totalVotes,
           timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-        };
-        room.history.unshift(historyItem);
+        });
+        room.savedThisRound = true;
       }
     }
 
-    // Reset votes & title for next story
+    io.to(currentRoomId).emit('room_state', sanitizeRoomState(room));
+  });
+
+  socket.on('reset_round', () => {
+    if (!currentRoomId || !rooms[currentRoomId]) return;
+    const room = rooms[currentRoomId];
+    // Reset board — history already saved at reveal time
     room.revealed = false;
+    room.savedThisRound = false;
     room.title = '';
     Object.keys(room.participants).forEach(id => {
       room.participants[id].vote = null;
     });
-
     io.to(currentRoomId).emit('room_state', sanitizeRoomState(room));
   });
 
   socket.on('update_title', ({ title }) => {
     if (!currentRoomId || !rooms[currentRoomId]) return;
-    const room = rooms[currentRoomId];
-    room.title = title || '';
-    io.to(currentRoomId).emit('room_state', sanitizeRoomState(room));
+    rooms[currentRoomId].title = title || '';
+    io.to(currentRoomId).emit('room_state', sanitizeRoomState(rooms[currentRoomId]));
   });
 
   socket.on('toggle_half_points', ({ includeHalfPoints }) => {
     if (!currentRoomId || !rooms[currentRoomId]) return;
-    const room = rooms[currentRoomId];
-    room.includeHalfPoints = typeof includeHalfPoints === 'boolean' ? includeHalfPoints : !room.includeHalfPoints;
-    io.to(currentRoomId).emit('room_state', sanitizeRoomState(room));
+    rooms[currentRoomId].includeHalfPoints =
+      typeof includeHalfPoints === 'boolean' ? includeHalfPoints : !rooms[currentRoomId].includeHalfPoints;
+    io.to(currentRoomId).emit('room_state', sanitizeRoomState(rooms[currentRoomId]));
   });
 
   socket.on('toggle_observer', ({ isObserver }) => {
@@ -219,22 +187,19 @@ io.on('connection', (socket) => {
     const room = rooms[currentRoomId];
     if (room.participants[socket.id]) {
       room.participants[socket.id].isObserver = !!isObserver;
-      if (isObserver) {
-        room.participants[socket.id].vote = null;
-      }
+      if (isObserver) room.participants[socket.id].vote = null;
     }
     io.to(currentRoomId).emit('room_state', sanitizeRoomState(room));
   });
 
   socket.on('clear_history', () => {
     if (!currentRoomId || !rooms[currentRoomId]) return;
-    const room = rooms[currentRoomId];
-    room.history = [];
-    io.to(currentRoomId).emit('room_state', sanitizeRoomState(room));
+    rooms[currentRoomId].history = [];
+    io.to(currentRoomId).emit('room_state', sanitizeRoomState(rooms[currentRoomId]));
   });
 
   socket.on('disconnect', () => {
-    if (currentRoomId && rooms[currentRoomId] && rooms[currentRoomId].participants[socket.id]) {
+    if (currentRoomId && rooms[currentRoomId]?.participants[socket.id]) {
       delete rooms[currentRoomId].participants[socket.id];
       if (Object.keys(rooms[currentRoomId].participants).length === 0) {
         setTimeout(() => {
@@ -251,12 +216,9 @@ io.on('connection', (socket) => {
 
 const distPath = path.join(__dirname, '../dist');
 app.use(express.static(distPath));
-
 app.get('*', (req, res) => {
   res.sendFile(path.join(distPath, 'index.html'), (err) => {
-    if (err) {
-      res.status(200).send('Planning Poker Server Running');
-    }
+    if (err) res.status(200).send('Planning Poker Server Running');
   });
 });
 

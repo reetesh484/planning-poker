@@ -10,16 +10,19 @@ import { RotateCcw, Play, ArrowRight } from 'lucide-react';
 export default function App() {
   const [socket, setSocket] = useState(null);
   const [connected, setConnected] = useState(false);
-  const [jiraBaseUrl, setJiraBaseUrl] = useState(() => localStorage.getItem('poker_jira_url') || '');
 
+  const [jiraBaseUrl, setJiraBaseUrl] = useState(() => localStorage.getItem('poker_jira_url') || '');
   const handleUpdateJiraBaseUrl = (url) => {
     setJiraBaseUrl(url);
     if (url) localStorage.setItem('poker_jira_url', url);
     else localStorage.removeItem('poker_jira_url');
   };
+
   const [name, setName] = useState(() => localStorage.getItem('poker_user_name') || '');
-  const [hasEnteredName, setHasEnteredName] = useState(() => !!localStorage.getItem('poker_user_name'));
-  const [roomId, setRoomId] = useState(() => {
+  const [localRoomName, setLocalRoomName] = useState(() => localStorage.getItem('poker_room_name') || '');
+  const [hasEnteredName, setHasEnteredName] = useState(false);
+
+  const [roomId] = useState(() => {
     const urlParams = new URLSearchParams(window.location.search);
     const paramRoom = urlParams.get('room');
     if (paramRoom) return paramRoom.toLowerCase();
@@ -30,6 +33,7 @@ export default function App() {
 
   const [roomState, setRoomState] = useState({
     id: roomId,
+    roomName: '',
     title: '',
     includeHalfPoints: false,
     deck: [0.5, 1, 2, 3, 4, 5, 6, '?', '☕'],
@@ -47,6 +51,10 @@ export default function App() {
       currentUrl.searchParams.set('room', roomId);
       window.history.replaceState({}, '', currentUrl.toString());
     }
+  }, [roomId]);
+
+  useEffect(() => {
+    if (!hasEnteredName) return;
 
     const newSocket = io({
       transports: ['websocket', 'polling'],
@@ -57,71 +65,43 @@ export default function App() {
 
     newSocket.on('connect', () => {
       setConnected(true);
-      if (hasEnteredName && name.trim()) {
-        newSocket.emit('join_room', {
-          roomId,
-          name: name.trim(),
-          isObserver: false
-        });
+      newSocket.emit('join_room', {
+        roomId,
+        name: name.trim(),
+        isObserver: false,
+        roomName: localRoomName.trim()
+      });
+    });
+
+    newSocket.on('disconnect', () => setConnected(false));
+    newSocket.on('room_state', (state) => {
+      setRoomState(state);
+      if (state.roomName && !localRoomName.trim()) {
+        setLocalRoomName(state.roomName);
       }
     });
 
-    newSocket.on('disconnect', () => {
-      setConnected(false);
-    });
-
-    newSocket.on('room_state', (state) => {
-      setRoomState(state);
-    });
-
-    return () => {
-      newSocket.disconnect();
-    };
-  }, [roomId, hasEnteredName]);
+    return () => newSocket.disconnect();
+  }, [hasEnteredName, name, roomId]);
 
   const handleNameSubmit = (e) => {
     e.preventDefault();
     if (!name.trim()) return;
     localStorage.setItem('poker_user_name', name.trim());
+    if (localRoomName.trim()) {
+      localStorage.setItem('poker_room_name', localRoomName.trim());
+    } else {
+      localStorage.removeItem('poker_room_name');
+    }
     setHasEnteredName(true);
-    if (socket && socket.connected) {
-      socket.emit('join_room', {
-        roomId,
-        name: name.trim(),
-        isObserver: false
-      });
-    }
   };
 
-  const handleCastVote = (voteVal) => {
-    if (socket) {
-      socket.emit('cast_vote', { vote: voteVal });
-    }
-  };
-
-  const handleRevealCards = () => {
-    if (socket) {
-      socket.emit('reveal_votes');
-    }
-  };
-
-  const handleResetRound = () => {
-    if (socket) {
-      socket.emit('reset_round', { saveToHistory: true });
-    }
-  };
-
-  const handleUpdateTitle = (newTitle) => {
-    if (socket) {
-      socket.emit('update_title', { title: newTitle });
-    }
-  };
-
-  const handleToggleHalfPoints = () => {
-    if (socket) {
-      socket.emit('toggle_half_points', { includeHalfPoints: !roomState.includeHalfPoints });
-    }
-  };
+  const handleCastVote = (voteVal) => socket?.emit('cast_vote', { vote: voteVal });
+  const handleRevealCards = () => socket?.emit('reveal_votes');
+  const handleResetRound = () => socket?.emit('reset_round');
+  const handleUpdateTitle = (newTitle) => socket?.emit('update_title', { title: newTitle });
+  const handleToggleHalfPoints = () =>
+    socket?.emit('toggle_half_points', { includeHalfPoints: !roomState.includeHalfPoints });
 
   const currentUser = roomState.participants.find(p => p.id === socket?.id);
   const isObserver = currentUser?.isObserver || false;
@@ -133,14 +113,12 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-[#080b11] text-slate-100 flex flex-col selection:bg-rose-500 selection:text-white">
-      
-      {/* Name Entrance Modal */}
+
+      {/* Entrance Modal */}
       {!hasEnteredName && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#080b11]/85 backdrop-blur-md">
           <div className="glass-panel w-full max-w-md rounded-3xl p-6 sm:p-8 border border-rose-500/30 shadow-2xl space-y-6 animate-scale-up">
             <div className="text-center space-y-3">
-              
-              {/* Minimal Brand Icon */}
               <div className="h-12 w-12 mx-auto rounded-2xl bg-[#FF0055] flex items-center justify-center shadow-lg shadow-rose-500/30">
                 <svg width="28" height="28" viewBox="0 0 60 60" fill="none">
                   <path d="M30 5C17.3 5 7 15.3 7 28C7 38.5 17.5 48.5 27 54.5C28.8 55.6 31.2 55.6 33 48.5C42.5 48.5 53 38.5 53 28C53 15.3 42.7 5 30 5Z" fill="#FFFFFF"/>
@@ -149,17 +127,17 @@ export default function App() {
                   <path d="M30 32L36 40H30V32Z" fill="#FF0055"/>
                 </svg>
               </div>
-
               <h2 className="text-xl font-bold text-white tracking-tight">Planning Poker</h2>
               <p className="text-xs text-slate-400">
-                Enter your display name to join room <strong className="text-rose-400 font-mono">{roomId}</strong>
+                Room: <strong className="text-rose-400 font-mono">{roomId}</strong>
               </p>
             </div>
 
             <form onSubmit={handleNameSubmit} className="space-y-4">
+              {/* Your Name */}
               <div>
                 <label className="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1.5">
-                  Your Display Name
+                  Your Display Name <span className="text-rose-400">*</span>
                 </label>
                 <input
                   type="text"
@@ -167,7 +145,21 @@ export default function App() {
                   autoFocus
                   value={name}
                   onChange={(e) => setName(e.target.value)}
-                  placeholder="e.g. Alex, Sarah (Frontend), Dev 1"
+                  placeholder="e.g. Alex, Sarah (Frontend)"
+                  className="w-full bg-slate-950 border border-slate-800 focus:border-rose-500 focus:ring-1 focus:ring-rose-500 text-sm text-slate-100 placeholder-slate-600 rounded-xl px-4 py-3 outline-none transition"
+                />
+              </div>
+
+              {/* Room Name (optional) */}
+              <div>
+                <label className="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1.5">
+                  Room Name <span className="text-slate-600 font-normal normal-case">(optional — shared in room and export)</span>
+                </label>
+                <input
+                  type="text"
+                  value={localRoomName}
+                  onChange={(e) => setLocalRoomName(e.target.value)}
+                  placeholder="e.g. Sprint 43 Planning, Q3 Backlog Grooming"
                   className="w-full bg-slate-950 border border-slate-800 focus:border-rose-500 focus:ring-1 focus:ring-rose-500 text-sm text-slate-100 placeholder-slate-600 rounded-xl px-4 py-3 outline-none transition"
                 />
               </div>
@@ -184,7 +176,7 @@ export default function App() {
         </div>
       )}
 
-      {/* Main App Layout */}
+      {/* Main App */}
       {hasEnteredName && (
         <>
           <Header
@@ -200,21 +192,22 @@ export default function App() {
             participantCount={roomState.participants.length}
             jiraBaseUrl={jiraBaseUrl}
             onUpdateJiraBaseUrl={handleUpdateJiraBaseUrl}
+            roomName={roomState.roomName}
           />
 
           <main className="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6 space-y-6">
-            
-            {/* Primary Action Control Bar */}
+
+            {/* Control Bar */}
             <div className="glass-panel rounded-2xl p-4 sm:p-5 flex flex-col sm:flex-row items-center justify-between gap-4 border border-slate-800/80">
-              
               <div className="flex items-center gap-3">
                 <div className={`h-3 w-3 rounded-full ${connected ? 'bg-emerald-500 shadow-sm shadow-emerald-500/50' : 'bg-rose-500 animate-pulse'}`} />
                 <span className="text-xs text-slate-300 font-medium">
-                  {connected ? `Connected as ${name}` : 'Connecting to server...'}
+                  {connected
+                    ? <>{name}{roomState.roomName && <span className="text-slate-500 ml-1">· {roomState.roomName}</span>}</>
+                    : 'Connecting to server...'}
                 </span>
               </div>
 
-              {/* Reveal & Reset Buttons */}
               <div className="flex items-center gap-3 w-full sm:w-auto">
                 {!roomState.revealed ? (
                   <button
@@ -239,15 +232,12 @@ export default function App() {
                   </button>
                 )}
               </div>
-
             </div>
 
-            {/* Revealed Results Summary */}
             {roomState.revealed && (
               <ResultsPanel stats={roomState.stats} storyTitle={roomState.title} />
             )}
 
-            {/* Card Selection Bar */}
             <CardDeck
               deck={roomState.deck}
               selectedVote={currentVote}
@@ -256,26 +246,23 @@ export default function App() {
               revealed={roomState.revealed}
             />
 
-            {/* Participants Grid */}
             <ParticipantGrid
               participants={roomState.participants}
               currentSocketId={socket?.id}
               revealed={roomState.revealed}
             />
-
           </main>
 
-          {/* Session History Drawer */}
           <HistoryDrawer
             isOpen={isHistoryOpen}
             onClose={() => setIsHistoryOpen(false)}
             history={roomState.history}
             onClearHistory={() => socket?.emit('clear_history')}
             jiraBaseUrl={jiraBaseUrl}
+            roomName={roomState.roomName}
           />
         </>
       )}
-
     </div>
   );
 }
