@@ -1,7 +1,47 @@
 import React, { useState } from 'react';
-import { X, Copy, Check, Trash2, FileText, History as HistoryIcon } from 'lucide-react';
+import { X, Copy, Check, Trash2, FileText, History as HistoryIcon, ExternalLink } from 'lucide-react';
 
-export default function HistoryDrawer({ isOpen, onClose, history, onClearHistory }) {
+// Regex: matches Jira-style ticket IDs like PROJ-101, CURB-42, ABC-1234
+const JIRA_TICKET_REGEX = /\b([A-Z][A-Z0-9]+-\d+)\b/g;
+
+function renderTitleWithJiraLinks(title, jiraBaseUrl) {
+  if (!jiraBaseUrl) return <span>{title}</span>;
+
+  const parts = [];
+  let lastIndex = 0;
+  let match;
+
+  JIRA_TICKET_REGEX.lastIndex = 0;
+  while ((match = JIRA_TICKET_REGEX.exec(title)) !== null) {
+    if (match.index > lastIndex) {
+      parts.push(<span key={lastIndex}>{title.slice(lastIndex, match.index)}</span>);
+    }
+    const ticketId = match[1];
+    const url = `${jiraBaseUrl}/browse/${ticketId}`;
+    parts.push(
+      <a
+        key={match.index}
+        href={url}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="inline-flex items-center gap-0.5 text-blue-400 hover:text-blue-300 hover:underline transition-colors font-mono font-semibold"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {ticketId}
+        <ExternalLink className="w-3 h-3 inline-block" />
+      </a>
+    );
+    lastIndex = match.index + match[0].length;
+  }
+
+  if (lastIndex < title.length) {
+    parts.push(<span key={lastIndex}>{title.slice(lastIndex)}</span>);
+  }
+
+  return <>{parts}</>;
+}
+
+export default function HistoryDrawer({ isOpen, onClose, history, onClearHistory, jiraBaseUrl }) {
   const [copied, setCopied] = useState(false);
 
   if (!isOpen) return null;
@@ -9,7 +49,6 @@ export default function HistoryDrawer({ isOpen, onClose, history, onClearHistory
   const handleCopyText = () => {
     if (!history || history.length === 0) return;
 
-    // Clean format: "Title - X SP" only
     const formattedText = [...history]
       .reverse()
       .map((item) => `${item.title} - ${item.finalPoints} SP`)
@@ -71,6 +110,16 @@ export default function HistoryDrawer({ isOpen, onClose, history, onClearHistory
           )}
         </div>
 
+        {/* Jira info banner if configured */}
+        {jiraBaseUrl && (
+          <div className="px-5 py-2 bg-blue-500/5 border-b border-blue-500/20 flex items-center gap-2">
+            <ExternalLink className="w-3.5 h-3.5 text-blue-400 shrink-0" />
+            <p className="text-[11px] text-blue-300">
+              Jira tickets are clickable — links to <span className="font-mono text-blue-200">{jiraBaseUrl}</span>
+            </p>
+          </div>
+        )}
+
         {/* History List */}
         <div className="flex-1 overflow-y-auto p-5 space-y-3">
           {!history || history.length === 0 ? (
@@ -89,8 +138,8 @@ export default function HistoryDrawer({ isOpen, onClose, history, onClearHistory
               >
                 <div className="flex items-center justify-between gap-3">
                   <div className="flex-1 min-w-0">
-                    <h4 className="text-sm font-semibold text-slate-100 truncate" title={item.title}>
-                      {item.title}
+                    <h4 className="text-sm font-semibold text-slate-100 leading-snug">
+                      {renderTitleWithJiraLinks(item.title, jiraBaseUrl)}
                     </h4>
                     <p className="text-xs text-slate-500 mt-0.5 font-mono">
                       {item.timestamp} · {item.totalVotes} votes
@@ -105,7 +154,7 @@ export default function HistoryDrawer({ isOpen, onClose, history, onClearHistory
           )}
         </div>
 
-        {/* Footer: Preview of copy format */}
+        {/* Footer */}
         {history && history.length > 0 && (
           <div className="px-5 py-3 border-t border-slate-800 bg-slate-950/60">
             <p className="text-[11px] text-slate-500 text-center">

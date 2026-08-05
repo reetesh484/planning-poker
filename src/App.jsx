@@ -10,6 +10,13 @@ import { RotateCcw, Play, ArrowRight } from 'lucide-react';
 export default function App() {
   const [socket, setSocket] = useState(null);
   const [connected, setConnected] = useState(false);
+  const [jiraBaseUrl, setJiraBaseUrl] = useState(() => localStorage.getItem('poker_jira_url') || '');
+
+  const handleUpdateJiraBaseUrl = (url) => {
+    setJiraBaseUrl(url);
+    if (url) localStorage.setItem('poker_jira_url', url);
+    else localStorage.removeItem('poker_jira_url');
+  };
   const [name, setName] = useState(() => localStorage.getItem('poker_user_name') || '');
   const [hasEnteredName, setHasEnteredName] = useState(() => !!localStorage.getItem('poker_user_name'));
   const [roomId, setRoomId] = useState(() => {
@@ -191,6 +198,8 @@ export default function App() {
             historyCount={roomState.history ? roomState.history.length : 0}
             onOpenHistory={() => setIsHistoryOpen(true)}
             participantCount={roomState.participants.length}
+            jiraBaseUrl={jiraBaseUrl}
+            onUpdateJiraBaseUrl={handleUpdateJiraBaseUrl}
           />
 
           <main className="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6 space-y-6">
@@ -262,6 +271,7 @@ export default function App() {
             onClose={() => setIsHistoryOpen(false)}
             history={roomState.history}
             onClearHistory={() => socket?.emit('clear_history')}
+            jiraBaseUrl={jiraBaseUrl}
           />
         </>
       )}
