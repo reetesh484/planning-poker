@@ -11,13 +11,6 @@ export default function App() {
   const [socket, setSocket] = useState(null);
   const [connected, setConnected] = useState(false);
 
-  const [jiraBaseUrl, setJiraBaseUrl] = useState(() => localStorage.getItem('poker_jira_url') || '');
-  const handleUpdateJiraBaseUrl = (url) => {
-    setJiraBaseUrl(url);
-    if (url) localStorage.setItem('poker_jira_url', url);
-    else localStorage.removeItem('poker_jira_url');
-  };
-
   const [name, setName] = useState(() => localStorage.getItem('poker_user_name') || '');
   const [localRoomName, setLocalRoomName] = useState(() => localStorage.getItem('poker_room_name') || '');
   const [hasEnteredName, setHasEnteredName] = useState(false);
@@ -190,8 +183,6 @@ export default function App() {
             historyCount={roomState.history ? roomState.history.length : 0}
             onOpenHistory={() => setIsHistoryOpen(true)}
             participantCount={roomState.participants.length}
-            jiraBaseUrl={jiraBaseUrl}
-            onUpdateJiraBaseUrl={handleUpdateJiraBaseUrl}
             roomName={roomState.roomName}
           />
 
@@ -258,7 +249,6 @@ export default function App() {
             onClose={() => setIsHistoryOpen(false)}
             history={roomState.history}
             onClearHistory={() => socket?.emit('clear_history')}
-            jiraBaseUrl={jiraBaseUrl}
             roomName={roomState.roomName}
           />
         </>

@@ -20,9 +20,11 @@ A fast, minimal, real-time Planning Poker application designed for story point e
   - Calculated raw average story points are automatically rounded up to the nearest `0.5` increment using `Math.ceil(avg * 2) / 2`.
   - *Examples*: `3.2` $\rightarrow$ `3.5`, `3.8` $\rightarrow$ `4.0`.
 - **🔗 Instant Shareable Room Links**: Anyone can create a room and copy a share link (`http://localhost:3001/?room=your-room-id`) in one click.
-- **📋 Optional Story Titles & Instant Text Export**:
-  - Add optional Jira ticket IDs or story titles (e.g. `PROJ-101 Search Bar UI`).
-  - Completed rounds are saved to session history with one-click **"Copy Text Export"** formatted for Slack or Jira notes.
+- **📋 Optional Story Titles & Export**:
+  - Add optional ticket IDs or story titles (e.g. `PROJ-101 Search Bar UI`).
+  - Completed rounds are saved to session history. Export via:
+    - **Copy All** — plain text in `id -> story points` format (one per line), e.g. `PROJ-101 -> 3.5`.
+    - **Export PDF** — opens the browser print dialog (Save as PDF).
 - **👁️ Spectator Mode**: Join as an observer without affecting voting progress or statistics.
 
 ---

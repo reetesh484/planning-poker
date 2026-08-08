@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Check, Eye, EyeOff, History, Link as LinkIcon, Layers, Settings2, X } from 'lucide-react';
+import { Check, Eye, EyeOff, History, Link as LinkIcon, Layers } from 'lucide-react';
 
 export default function Header({
   roomId,
@@ -12,15 +12,11 @@ export default function Header({
   historyCount,
   onOpenHistory,
   participantCount,
-  jiraBaseUrl,
-  onUpdateJiraBaseUrl,
   roomName,
 }) {
   const [copied, setCopied] = useState(false);
   const [localTitle, setLocalTitle] = useState(title || '');
   const isFocused = useRef(false);
-  const [showJiraInput, setShowJiraInput] = useState(false);
-  const [localJiraUrl, setLocalJiraUrl] = useState(jiraBaseUrl || '');
 
   // Sync local title from roomState only when not actively typing
   useEffect(() => {
@@ -28,10 +24,6 @@ export default function Header({
       setLocalTitle(title || '');
     }
   }, [title]);
-
-  useEffect(() => {
-    setLocalJiraUrl(jiraBaseUrl || '');
-  }, [jiraBaseUrl]);
 
   const handleTitleChange = (e) => {
     const newVal = e.target.value;
@@ -43,12 +35,6 @@ export default function Header({
     navigator.clipboard.writeText(window.location.href);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
-  };
-
-  const handleJiraSave = () => {
-    const trimmed = localJiraUrl.trim().replace(/\/$/, ''); // strip trailing slash
-    onUpdateJiraBaseUrl(trimmed);
-    setShowJiraInput(false);
   };
 
   return (
@@ -108,7 +94,7 @@ export default function Header({
               onUpdateTitle(localTitle);
             }}
             onChange={handleTitleChange}
-            placeholder="Optional: Story Title or Jira Ticket (e.g. PROJ-101 Search UI)..."
+            placeholder="Optional: Story Title or Ticket ID (e.g. PROJ-101 Search UI)..."
             className="w-full bg-slate-950/80 border border-slate-800 focus:border-rose-500 focus:ring-1 focus:ring-rose-500 text-sm text-slate-100 placeholder-slate-500 rounded-xl px-3.5 py-2 transition-all duration-150 outline-none"
           />
         </div>
@@ -142,20 +128,6 @@ export default function Header({
             <span>{isObserver ? 'Spectator' : 'Voter'}</span>
           </button>
 
-          {/* Jira config button */}
-          <button
-            onClick={() => setShowJiraInput(v => !v)}
-            className={`px-2.5 py-1.5 rounded-xl text-xs font-medium border transition-all duration-200 flex items-center gap-1.5 ${
-              jiraBaseUrl
-                ? 'bg-blue-500/20 text-blue-300 border-blue-500/40'
-                : 'bg-slate-900 text-slate-400 border-slate-800 hover:text-slate-200 hover:border-slate-700'
-            }`}
-            title="Configure Jira base URL for clickable ticket links"
-          >
-            <Settings2 className="w-3.5 h-3.5 text-blue-400" />
-            <span>{jiraBaseUrl ? 'Jira ✓' : 'Jira URL'}</span>
-          </button>
-
           {/* History drawer */}
           <button
             onClick={onOpenHistory}
@@ -171,42 +143,6 @@ export default function Header({
           </button>
         </div>
       </div>
-
-      {/* Jira URL config panel — drops down inline */}
-      {showJiraInput && (
-        <div className="max-w-7xl mx-auto mt-3 animate-fade-in">
-          <div className="flex items-center gap-2 bg-slate-950/80 border border-blue-500/30 rounded-xl px-3 py-2">
-            <Settings2 className="w-4 h-4 text-blue-400 shrink-0" />
-            <input
-              type="url"
-              autoFocus
-              value={localJiraUrl}
-              onChange={(e) => setLocalJiraUrl(e.target.value)}
-              onKeyDown={(e) => { if (e.key === 'Enter') handleJiraSave(); if (e.key === 'Escape') setShowJiraInput(false); }}
-              placeholder="https://yourcompany.atlassian.net"
-              className="flex-1 bg-transparent text-sm text-slate-100 placeholder-slate-500 outline-none"
-            />
-            <button
-              onClick={handleJiraSave}
-              className="px-3 py-1 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold transition shrink-0"
-            >
-              Save
-            </button>
-            {jiraBaseUrl && (
-              <button
-                onClick={() => { onUpdateJiraBaseUrl(''); setLocalJiraUrl(''); setShowJiraInput(false); }}
-                className="p-1 text-slate-400 hover:text-rose-400 transition"
-                title="Clear Jira URL"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            )}
-          </div>
-          <p className="text-[11px] text-slate-500 mt-1.5 px-1">
-            Provide a sample ticket URL like <span className="font-mono text-slate-400">https://yourcompany.atlassian.net/browse/CURBIQ-8999</span>. Ticket IDs from history titles will replace only the ticket segment.
-          </p>
-        </div>
-      )}
     </header>
   );
 }
