@@ -45,11 +45,11 @@ export default function Header({
         <div className="flex items-center justify-between w-full md:w-auto gap-3">
           <div className="flex items-center gap-3">
             <div className="h-9 w-9 rounded-xl bg-[#FF0055] flex items-center justify-center shadow-lg shadow-rose-500/20 shrink-0">
-              <svg width="22" height="22" viewBox="0 0 60 60" fill="none">
-                <path d="M30 5C17.3 5 7 15.3 7 28C7 38.5 17.5 48.5 27 54.5C28.8 55.6 31.2 55.6 33 48.5C42.5 48.5 53 38.5 53 28C53 15.3 42.7 5 30 5Z" fill="#FFFFFF"/>
-                <circle cx="30" cy="27" r="10" fill="#FF0055"/>
-                <circle cx="30" cy="27" r="5" fill="#FFFFFF"/>
-                <path d="M30 32L36 40H30V32Z" fill="#FF0055"/>
+              <svg width="22" height="22" viewBox="0 0 32 32" fill="none">
+                <rect x="6" y="4" width="20" height="26" rx="2.5" fill="#FFFFFF" stroke="#FF0055" strokeWidth="1.5"/>
+                <text x="10" y="12" fontFamily="ui-sans-serif, system-ui, -apple-system, sans-serif" fontSize="7" fontWeight="800" fill="#FF0055">A</text>
+                <text x="22" y="27" fontFamily="ui-sans-serif, system-ui, -apple-system, sans-serif" fontSize="7" fontWeight="800" fill="#FF0055" textAnchor="end" transform="rotate(180 22 27)">A</text>
+                <text x="16" y="23" fontFamily="ui-sans-serif, system-ui, -apple-system, sans-serif" fontSize="14" fontWeight="800" fill="#FF0055" textAnchor="middle">♥</text>
               </svg>
             </div>
             <div>

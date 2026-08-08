@@ -12,16 +12,17 @@ export default function App() {
   const [connected, setConnected] = useState(false);
 
   const [name, setName] = useState(() => localStorage.getItem('poker_user_name') || '');
-  const [localRoomName, setLocalRoomName] = useState(() => localStorage.getItem('poker_room_name') || '');
-  const [hasEnteredName, setHasEnteredName] = useState(false);
-
-  const [roomId] = useState(() => {
+  const [localRoomName, setLocalRoomName] = useState('');
+  const [{ roomId, isCreator }] = useState(() => {
     const urlParams = new URLSearchParams(window.location.search);
     const paramRoom = urlParams.get('room');
-    if (paramRoom) return paramRoom.toLowerCase();
+    if (paramRoom) return { roomId: paramRoom.toLowerCase(), isCreator: false };
     const pathRoom = window.location.pathname.replace('/', '').trim();
-    if (pathRoom && pathRoom.length > 2) return pathRoom.toLowerCase();
-    return 'room-' + Math.random().toString(36).substring(2, 7);
+    if (pathRoom && pathRoom.length > 2) return { roomId: pathRoom.toLowerCase(), isCreator: false };
+    return { roomId: 'room-' + Math.random().toString(36).substring(2, 7), isCreator: true };
+  });
+  const [hasEnteredName, setHasEnteredName] = useState(() => {
+    return !!(sessionStorage.getItem('poker_entered_session') && localStorage.getItem('poker_user_name'));
   });
 
   const [roomState, setRoomState] = useState({
@@ -81,6 +82,7 @@ export default function App() {
     e.preventDefault();
     if (!name.trim()) return;
     localStorage.setItem('poker_user_name', name.trim());
+    sessionStorage.setItem('poker_entered_session', '1');
     if (localRoomName.trim()) {
       localStorage.setItem('poker_room_name', localRoomName.trim());
     } else {
@@ -113,11 +115,11 @@ export default function App() {
           <div className="glass-panel w-full max-w-md rounded-3xl p-6 sm:p-8 border border-rose-500/30 shadow-2xl space-y-6 animate-scale-up">
             <div className="text-center space-y-3">
               <div className="h-12 w-12 mx-auto rounded-2xl bg-[#FF0055] flex items-center justify-center shadow-lg shadow-rose-500/30">
-                <svg width="28" height="28" viewBox="0 0 60 60" fill="none">
-                  <path d="M30 5C17.3 5 7 15.3 7 28C7 38.5 17.5 48.5 27 54.5C28.8 55.6 31.2 55.6 33 48.5C42.5 48.5 53 38.5 53 28C53 15.3 42.7 5 30 5Z" fill="#FFFFFF"/>
-                  <circle cx="30" cy="27" r="10" fill="#FF0055"/>
-                  <circle cx="30" cy="27" r="5" fill="#FFFFFF"/>
-                  <path d="M30 32L36 40H30V32Z" fill="#FF0055"/>
+                <svg width="28" height="28" viewBox="0 0 32 32" fill="none">
+                  <rect x="4" y="3" width="20" height="26" rx="2.5" fill="#FFFFFF" stroke="#FF0055" strokeWidth="1.5"/>
+                  <text x="8" y="11" fontFamily="ui-sans-serif, system-ui, -apple-system, sans-serif" fontSize="7" fontWeight="800" fill="#FF0055">A</text>
+                  <text x="20" y="26" fontFamily="ui-sans-serif, system-ui, -apple-system, sans-serif" fontSize="7" fontWeight="800" fill="#FF0055" textAnchor="end" transform="rotate(180 20 26)">A</text>
+                  <text x="14" y="22" fontFamily="ui-sans-serif, system-ui, -apple-system, sans-serif" fontSize="14" fontWeight="800" fill="#FF0055" textAnchor="middle">♥</text>
                 </svg>
               </div>
               <h2 className="text-xl font-bold text-white tracking-tight">Planning Poker</h2>
@@ -143,19 +145,21 @@ export default function App() {
                 />
               </div>
 
-              {/* Room Name (optional) */}
-              <div>
-                <label className="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1.5">
-                  Room Name <span className="text-slate-600 font-normal normal-case">(optional — shared in room and export)</span>
-                </label>
-                <input
-                  type="text"
-                  value={localRoomName}
-                  onChange={(e) => setLocalRoomName(e.target.value)}
-                  placeholder="e.g. Sprint 43 Planning, Q3 Backlog Grooming"
-                  className="w-full bg-slate-950 border border-slate-800 focus:border-rose-500 focus:ring-1 focus:ring-rose-500 text-sm text-slate-100 placeholder-slate-600 rounded-xl px-4 py-3 outline-none transition"
-                />
-              </div>
+              {/* Room Name (optional, only when creating) */}
+              {isCreator && (
+                <div>
+                  <label className="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1.5">
+                    Room Name <span className="text-slate-600 font-normal normal-case">(optional — shared in room and export)</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={localRoomName}
+                    onChange={(e) => setLocalRoomName(e.target.value)}
+                    placeholder="e.g. Sprint 43 Planning, Q3 Backlog Grooming"
+                    className="w-full bg-slate-950 border border-slate-800 focus:border-rose-500 focus:ring-1 focus:ring-rose-500 text-sm text-slate-100 placeholder-slate-600 rounded-xl px-4 py-3 outline-none transition"
+                  />
+                </div>
+              )}
 
               <button
                 type="submit"
