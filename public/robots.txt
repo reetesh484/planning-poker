@@ -1,0 +1,6 @@
+User-agent: *
+Allow: /$
+Allow: /og-image.png
+Disallow: /
+
+Sitemap: https://curbiq-poker.onrender.com/sitemap.xml

@@ -2,6 +2,7 @@ import express from 'express';
 import { createServer } from 'http';
 import { Server } from 'socket.io';
 import path from 'path';
+import compression from 'compression';
 import { fileURLToPath } from 'url';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -214,7 +215,27 @@ io.on('connection', (socket) => {
 });
 
 const distPath = path.join(__dirname, '../dist');
-app.use(express.static(distPath));
+
+const ONE_YEAR = 60 * 60 * 24 * 365;
+
+// Brotli + gzip compression (Brotli is used automatically when the client supports it).
+app.use(compression());
+
+app.use(express.static(distPath, {
+  maxAge: ONE_YEAR,
+  immutable: true,
+  setHeaders(res, filePath) {
+    const name = path.basename(filePath);
+    if (filePath.endsWith('.html')) {
+      res.setHeader('Cache-Control', 'public, max-age=0, must-revalidate');
+    } else if (name === 'robots.txt' || name === 'sitemap.xml') {
+      res.setHeader('Cache-Control', 'public, max-age=3600');
+    } else if (filePath.includes('og-image')) {
+      res.setHeader('Cache-Control', 'public, max-age=86400');
+    }
+  }
+}));
+
 app.get('*', (req, res) => {
   res.sendFile(path.join(distPath, 'index.html'), (err) => {
     if (err) res.status(200).send('Planning Poker Server Running');
