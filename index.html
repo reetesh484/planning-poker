@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" class="scroll-smooth">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -29,9 +29,202 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "SoftwareApplication",
+      "name": "Planning Poker",
+      "alternateName": "Free Online Planning Poker",
+      "url": "https://curbiq-poker.onrender.com/",
+      "description": "Free online planning poker for agile teams. Estimate story points together in a private shared room with live voting, card reveals, and round history. No signup required.",
+      "applicationCategory": "BusinessApplication",
+      "operatingSystem": "Web",
+      "offers": {
+        "@type": "Offer",
+        "price": "0",
+        "priceCurrency": "USD"
+      }
+    }
+    </script>
   </head>
   <body class="bg-slate-950 text-slate-100 font-sans antialiased selection:bg-brand-500 selection:text-white min-h-screen">
     <div id="root"></div>
+
+    <!-- Static landing page: crawlable by search engines without JavaScript -->
+    <div id="landing" class="min-h-screen bg-[#080b11] text-slate-100">
+      <header class="sticky top-0 z-40 border-b border-slate-800/80 bg-[#080b11]/85 backdrop-blur-md">
+        <div class="max-w-6xl mx-auto px-4 sm:px-6 py-3.5 flex items-center justify-between gap-3">
+          <a href="/" class="flex items-center gap-2.5">
+            <span class="h-8 w-8 rounded-lg bg-[#FF0055] flex items-center justify-center shrink-0">
+              <svg width="20" height="20" viewBox="0 0 32 32" fill="none">
+                <rect x="6" y="4" width="20" height="26" rx="2.5" fill="#FFFFFF" stroke="#FF0055" strokeWidth="1.5"/>
+                <text x="10" y="12" fontFamily="sans-serif" fontSize="7" fontWeight="800" fill="#FF0055">A</text>
+                <text x="22" y="27" fontFamily="sans-serif" fontSize="7" fontWeight="800" fill="#FF0055" textAnchor="end" transform="rotate(180 22 27)">A</text>
+                <text x="16" y="23" fontFamily="sans-serif" fontSize="14" fontWeight="800" fill="#FF0055" textAnchor="middle">♥</text>
+              </svg>
+            </span>
+            <span class="text-sm font-bold text-white tracking-tight">Planning Poker</span>
+          </a>
+          <nav class="hidden sm:flex items-center gap-5 text-xs text-slate-400 font-medium">
+            <a href="#features" class="hover:text-slate-200 transition">Features</a>
+            <a href="#how-it-works" class="hover:text-slate-200 transition">How it works</a>
+            <a href="#faq" class="hover:text-slate-200 transition">FAQ</a>
+          </nav>
+          <button onclick="createRoom()" class="text-xs font-semibold px-3.5 py-1.5 rounded-xl bg-gradient-to-r from-rose-600 to-rose-700 hover:from-rose-500 hover:to-rose-600 text-white transition">
+            Create a Room
+          </button>
+        </div>
+      </header>
+
+      <main>
+        <!-- Hero -->
+        <section class="max-w-6xl mx-auto px-4 sm:px-6 pt-16 sm:pt-24 pb-14 text-center">
+          <span class="inline-block text-[11px] font-semibold uppercase tracking-wider text-rose-400 bg-rose-500/10 border border-rose-500/25 px-3 py-1 rounded-full mb-6">
+            Free &middot; No signup &middot; Private rooms
+          </span>
+          <h1 class="text-4xl sm:text-6xl font-extrabold text-white tracking-tight leading-tight">
+            Planning Poker for Agile Teams
+          </h1>
+          <p class="mt-5 max-w-2xl mx-auto text-base sm:text-lg text-slate-400">
+            Estimate story points together with your team in a shared online room. Live voting, anonymous
+            card reveals, round history and export — free, no account required.
+          </p>
+          <form onsubmit="joinRoom(event)" class="mt-8 max-w-lg mx-auto flex flex-col sm:flex-row gap-3 justify-center">
+            <input
+              id="room-code"
+              type="text"
+              placeholder="Enter a room code to join..."
+              class="bg-slate-900 border border-slate-800 focus:border-rose-500 focus:ring-1 focus:ring-rose-500 text-sm text-slate-100 placeholder-slate-500 rounded-xl px-4 py-3 outline-none transition flex-1"
+            />
+            <button type="submit" class="px-5 py-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-100 text-sm font-semibold border border-slate-700 transition">
+              Join Room
+            </button>
+          </form>
+          <div class="mt-4">
+            <button onclick="createRoom()" class="px-6 py-3 rounded-xl bg-gradient-to-r from-rose-600 to-rose-700 hover:from-rose-500 hover:to-rose-600 text-white text-sm font-semibold shadow-lg shadow-rose-500/30 transition">
+              Create a New Room
+            </button>
+          </div>
+          <p class="mt-6 text-xs text-slate-500">Works on any device. Share the link and start voting in seconds.</p>
+        </section>
+
+        <!-- Features -->
+        <section id="features" class="max-w-6xl mx-auto px-4 sm:px-6 py-12">
+          <h2 class="text-2xl sm:text-3xl font-bold text-white text-center tracking-tight">
+            Everything you need to run a smooth estimation session
+          </h2>
+          <div class="mt-10 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            <article class="glass-card rounded-2xl p-5">
+              <h3 class="text-sm font-bold text-white">Live card voting</h3>
+              <p class="mt-2 text-sm text-slate-400">Everyone votes in real time. See who has voted without revealing any values until you are ready.</p>
+            </article>
+            <article class="glass-card rounded-2xl p-5">
+              <h3 class="text-sm font-bold text-white">Anonymous until reveal</h3>
+              <p class="mt-2 text-sm text-slate-400">Estimates stay hidden until the reveal, keeping voting independent and free from group bias.</p>
+            </article>
+            <article class="glass-card rounded-2xl p-5">
+              <h3 class="text-sm font-bold text-white">One-click reveal &amp; stats</h3>
+              <p class="mt-2 text-sm text-slate-400">Reveal all cards with a single click and instantly see average, min, max and consensus.</p>
+            </article>
+            <article class="glass-card rounded-2xl p-5">
+              <h3 class="text-sm font-bold text-white">Round history &amp; export</h3>
+              <p class="mt-2 text-sm text-slate-400">Every revealed round is saved with its story points. Copy or export your session whenever you need it.</p>
+            </article>
+            <article class="glass-card rounded-2xl p-5">
+              <h3 class="text-sm font-bold text-white">Private shareable rooms</h3>
+              <p class="mt-2 text-sm text-slate-400">Generate a unique room link and share it instantly. No accounts, no invites, no configuration.</p>
+            </article>
+            <article class="glass-card rounded-2xl p-5">
+              <h3 class="text-sm font-bold text-white">Observer &amp; half-point modes</h3>
+              <p class="mt-2 text-sm text-slate-400">Let stakeholders watch without voting, and enable half points for finer-grained estimates.</p>
+            </article>
+          </div>
+        </section>
+
+        <!-- How it works -->
+        <section id="how-it-works" class="max-w-6xl mx-auto px-4 sm:px-6 py-12">
+          <h2 class="text-2xl sm:text-3xl font-bold text-white text-center tracking-tight">How it works</h2>
+          <div class="mt-10 grid grid-cols-1 md:grid-cols-3 gap-4">
+            <article class="glass-card rounded-2xl p-5">
+              <span class="text-2xl font-extrabold text-rose-500">1</span>
+              <h3 class="mt-2 text-sm font-bold text-white">Create a room</h3>
+              <p class="mt-2 text-sm text-slate-400">Click "Create a Room" to generate a unique link, then share it with your team.</p>
+            </article>
+            <article class="glass-card rounded-2xl p-5">
+              <span class="text-2xl font-extrabold text-rose-500">2</span>
+              <h3 class="mt-2 text-sm font-bold text-white">Vote</h3>
+              <p class="mt-2 text-sm text-slate-400">Each teammate privately selects the story point card that matches their estimate. Votes stay hidden.</p>
+            </article>
+            <article class="glass-card rounded-2xl p-5">
+              <span class="text-2xl font-extrabold text-rose-500">3</span>
+              <h3 class="mt-2 text-sm font-bold text-white">Reveal &amp; reset</h3>
+              <p class="mt-2 text-sm text-slate-400">Reveal the cards to discuss, save the result to history, then reset for the next story.</p>
+            </article>
+          </div>
+        </section>
+
+        <!-- FAQ -->
+        <section id="faq" class="max-w-3xl mx-auto px-4 sm:px-6 py-12">
+          <h2 class="text-2xl sm:text-3xl font-bold text-white text-center tracking-tight">Frequently asked questions</h2>
+          <div class="mt-8 space-y-3">
+            <details class="glass-card rounded-2xl p-5 group">
+              <summary class="text-sm font-bold text-white cursor-pointer">What is planning poker?</summary>
+              <p class="mt-3 text-sm text-slate-400">
+                Planning poker (also called scrum poker) is an agile estimation technique. Team members estimate
+                story points by privately selecting a card, then reveal together and discuss until they reach consensus.
+              </p>
+            </details>
+            <details class="glass-card rounded-2xl p-5 group">
+              <summary class="text-sm font-bold text-white cursor-pointer">Is Planning Poker really free?</summary>
+              <p class="mt-3 text-sm text-slate-400">Yes, it is completely free. There is no signup, no account and no credit card required.</p>
+            </details>
+            <details class="glass-card rounded-2xl p-5 group">
+              <summary class="text-sm font-bold text-white cursor-pointer">How do I share a room with my team?</summary>
+              <p class="mt-3 text-sm text-slate-400">
+                Create a room and copy the share link, or have teammates type the room code into the join box on this page.
+              </p>
+            </details>
+            <details class="glass-card rounded-2xl p-5 group">
+              <summary class="text-sm font-bold text-white cursor-pointer">Can non-voting members join?</summary>
+              <p class="mt-3 text-sm text-slate-400">
+                Yes. Anyone can join as a spectator (observer) to watch the session without participating in the vote.
+              </p>
+            </details>
+            <details class="glass-card rounded-2xl p-5 group">
+              <summary class="text-sm font-bold text-white cursor-pointer">Are my rooms private?</summary>
+              <p class="mt-3 text-sm text-slate-400">
+                Rooms are only reachable by people who have the link or the room code. Empty rooms are cleaned up automatically.
+              </p>
+            </details>
+            <details class="glass-card rounded-2xl p-5 group">
+              <summary class="text-sm font-bold text-white cursor-pointer">Which point decks are supported?</summary>
+              <p class="mt-3 text-sm text-slate-400">
+                The default deck (0.5, 1, 2, 3, 4, 5, 6, ?, &#9749;) is enabled by default, with an optional half-points deck
+                and observer mode available in every room.
+              </p>
+            </details>
+          </div>
+        </section>
+      </main>
+
+      <footer class="border-t border-slate-800/80 py-8 text-center">
+        <p class="text-xs text-slate-500">Planning Poker — free agile story point estimation for teams. No signup required.</p>
+      </footer>
+    </div>
+
+    <script>
+      function createRoom() {
+        sessionStorage.setItem('poker_is_creator', '1');
+        const id = 'room-' + Math.random().toString(36).substring(2, 7);
+        window.location.href = '/?room=' + id;
+      }
+      function joinRoom(e) {
+        e.preventDefault();
+        const code = document.getElementById('room-code').value.trim().toLowerCase();
+        if (code) window.location.href = '/?room=' + encodeURIComponent(code);
+      }
+    </script>
+
     <script type="module" src="/src/main.jsx"></script>
   </body>
 </html>

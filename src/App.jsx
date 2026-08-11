@@ -16,11 +16,15 @@ export default function App() {
   const [{ roomId, isCreator }] = useState(() => {
     const urlParams = new URLSearchParams(window.location.search);
     const paramRoom = urlParams.get('room');
-    if (paramRoom) return { roomId: paramRoom.toLowerCase(), isCreator: false };
     const pathRoom = window.location.pathname.replace('/', '').trim();
-    if (pathRoom && pathRoom.length > 2) return { roomId: pathRoom.toLowerCase(), isCreator: false };
-    return { roomId: 'room-' + Math.random().toString(36).substring(2, 7), isCreator: true };
+    if (paramRoom || (pathRoom && pathRoom.length > 2)) {
+      const createdNew = sessionStorage.getItem('poker_is_creator') === '1';
+      if (createdNew) sessionStorage.removeItem('poker_is_creator');
+      return { roomId: (paramRoom || pathRoom).toLowerCase(), isCreator: createdNew };
+    }
+    return { roomId: null, isCreator: false };
   });
+  const hasRoom = !!roomId;
   const [hasEnteredName, setHasEnteredName] = useState(() => {
     return !!(sessionStorage.getItem('poker_entered_session') && localStorage.getItem('poker_user_name'));
   });
@@ -40,12 +44,17 @@ export default function App() {
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
 
   useEffect(() => {
+    if (!hasRoom) return;
+
+    const landing = document.getElementById('landing');
+    if (landing) landing.style.display = 'none';
+
     const currentUrl = new URL(window.location.href);
     if (currentUrl.searchParams.get('room') !== roomId) {
       currentUrl.searchParams.set('room', roomId);
       window.history.replaceState({}, '', currentUrl.toString());
     }
-  }, [roomId]);
+  }, [hasRoom, roomId]);
 
   useEffect(() => {
     if (!hasEnteredName) return;
@@ -105,6 +114,8 @@ export default function App() {
   const voters = roomState.participants.filter(p => !p.isObserver);
   const votersCount = voters.length;
   const votedCount = voters.filter(p => p.vote !== null && p.vote !== undefined).length;
+
+  if (!hasRoom) return null;
 
   return (
     <div className="min-h-screen bg-[#080b11] text-slate-100 flex flex-col selection:bg-rose-500 selection:text-white">
