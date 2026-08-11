@@ -26,7 +26,7 @@ export default function ParticipantGrid({ participants, currentSocketId, reveale
           <div className="w-full sm:w-48 flex items-center gap-2">
             <div className="flex-1 h-2 bg-slate-900 rounded-full overflow-hidden border border-slate-800">
               <div
-                className="h-full bg-gradient-to-r from-curbiq-500 to-emerald-500 transition-all duration-300 rounded-full"
+                className="h-full bg-gradient-to-r from-brand-500 to-emerald-500 transition-all duration-300 rounded-full"
                 style={{ width: `${progressPercent}%` }}
               />
             </div>
@@ -45,7 +45,7 @@ export default function ParticipantGrid({ participants, currentSocketId, reveale
             <div
               key={p.id}
               className={`glass-card relative rounded-2xl p-4 flex flex-col items-center justify-between min-h-[120px] transition-all duration-200 ${
-                isYou ? 'ring-1 ring-curbiq-500/50 bg-curbiq-950/10' : ''
+                isYou ? 'ring-1 ring-brand-500/50 bg-brand-950/10' : ''
               }`}
             >
               {/* Top row: Name & You Badge */}
@@ -55,7 +55,7 @@ export default function ParticipantGrid({ participants, currentSocketId, reveale
                   {p.name}
                 </span>
                 {isYou && (
-                  <span className="text-[10px] uppercase font-bold text-curbiq-400 bg-curbiq-500/10 px-1.5 py-0.5 rounded border border-curbiq-500/30 shrink-0">
+                  <span className="text-[10px] uppercase font-bold text-brand-400 bg-brand-500/10 px-1.5 py-0.5 rounded border border-brand-500/30 shrink-0">
                     You
                   </span>
                 )}
@@ -70,7 +70,7 @@ export default function ParticipantGrid({ participants, currentSocketId, reveale
                   </div>
                 ) : revealed ? (
                   /* Revealed Card */
-                  <div className="h-14 w-11 rounded-xl bg-gradient-to-b from-curbiq-500 to-rose-700 text-white font-bold text-xl flex items-center justify-center shadow-lg shadow-curbiq-500/30 border border-curbiq-300 animate-scale-up">
+                  <div className="h-14 w-11 rounded-xl bg-gradient-to-b from-brand-500 to-rose-700 text-white font-bold text-xl flex items-center justify-center shadow-lg shadow-brand-500/30 border border-brand-300 animate-scale-up">
                     {hasVoted ? p.vote : '—'}
                   </div>
                 ) : hasVoted ? (

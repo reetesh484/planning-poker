@@ -8,24 +8,18 @@ export default {
   theme: {
     extend: {
       colors: {
-        curbiq: {
+        brand: {
           50: '#fff1f4',
           100: '#ffe4e8',
           200: '#fecdd6',
           300: '#fda4af',
           400: '#fb7185',
-          500: '#ff0055', // Primary CurbIQ Crimson
+          500: '#ff0055', // Primary brand crimson
           600: '#e11d48',
           700: '#be123c',
           800: '#9f1239',
           900: '#881337',
           950: '#4c0519',
-        },
-        brand: {
-          50: '#fff1f4',
-          500: '#ff0055',
-          600: '#e11d48',
-          700: '#be123c',
         }
       },
       fontFamily: {
