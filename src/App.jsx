@@ -110,6 +110,7 @@ export default function App() {
   const currentUser = roomState.participants.find(p => p.id === socket?.id);
   const isObserver = currentUser?.isObserver || false;
   const currentVote = currentUser?.vote;
+  const isOwner = roomState.ownerId === socket?.id;
 
   const voters = roomState.participants.filter(p => !p.isObserver);
   const votersCount = voters.length;
@@ -215,27 +216,29 @@ export default function App() {
               </div>
 
               <div className="flex items-center gap-3 w-full sm:w-auto">
-                {!roomState.revealed ? (
-                  <button
-                    onClick={handleRevealCards}
-                    disabled={votedCount === 0}
-                    className={`flex-1 sm:flex-initial px-6 py-2.5 rounded-xl font-bold text-sm flex items-center justify-center gap-2 transition-all shadow-lg ${
-                      votedCount === 0
-                        ? 'bg-slate-800 text-slate-500 cursor-not-allowed border border-slate-800'
-                        : 'bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white shadow-emerald-600/30 border border-emerald-400/30 transform active:scale-95'
-                    }`}
-                  >
-                    <Play className="w-4 h-4 fill-current" />
-                    <span>Reveal Cards ({votedCount}/{votersCount})</span>
-                  </button>
-                ) : (
-                  <button
-                    onClick={handleResetRound}
-                    className="flex-1 sm:flex-initial px-6 py-2.5 rounded-xl font-bold text-sm bg-gradient-to-r from-rose-600 to-rose-700 hover:from-rose-500 hover:to-rose-600 text-white shadow-lg shadow-rose-500/30 border border-rose-400/30 flex items-center justify-center gap-2 transition-all transform active:scale-95"
-                  >
-                    <RotateCcw className="w-4 h-4" />
-                    <span>Next Story / Reset</span>
-                  </button>
+                {isOwner && (
+                  !roomState.revealed ? (
+                    <button
+                      onClick={handleRevealCards}
+                      disabled={votedCount === 0}
+                      className={`flex-1 sm:flex-initial px-6 py-2.5 rounded-xl font-bold text-sm flex items-center justify-center gap-2 transition-all shadow-lg ${
+                        votedCount === 0
+                          ? 'bg-slate-800 text-slate-500 cursor-not-allowed border border-slate-800'
+                          : 'bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white shadow-emerald-600/30 border border-emerald-400/30 transform active:scale-95'
+                      }`}
+                    >
+                      <Play className="w-4 h-4 fill-current" />
+                      <span>Reveal Cards ({votedCount}/{votersCount})</span>
+                    </button>
+                  ) : (
+                    <button
+                      onClick={handleResetRound}
+                      className="flex-1 sm:flex-initial px-6 py-2.5 rounded-xl font-bold text-sm bg-gradient-to-r from-rose-600 to-rose-700 hover:from-rose-500 hover:to-rose-600 text-white shadow-lg shadow-rose-500/30 border border-rose-400/30 flex items-center justify-center gap-2 transition-all transform active:scale-95"
+                    >
+                      <RotateCcw className="w-4 h-4" />
+                      <span>Next Story / Reset</span>
+                    </button>
+                  )
                 )}
               </div>
             </div>

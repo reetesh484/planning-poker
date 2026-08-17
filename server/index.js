@@ -30,7 +30,8 @@ function getOrCreateRoom(roomId) {
       revealed: false,
       savedThisRound: false, // prevents double-saving if reveal is clicked multiple times
       participants: {},
-      history: []
+      history: [],
+      ownerId: null
     };
   }
   return rooms[cleanId];
@@ -88,6 +89,7 @@ function sanitizeRoomState(room) {
     includeHalfPoints: room.includeHalfPoints,
     deck: activeDeck,
     revealed: room.revealed,
+    ownerId: room.ownerId,
     participants: Object.values(room.participants).map(p => ({
       id: p.id,
       name: p.name,
@@ -107,6 +109,11 @@ io.on('connection', (socket) => {
     currentRoomId = (roomId || 'default').toLowerCase().trim();
     socket.join(currentRoomId);
     const room = getOrCreateRoom(currentRoomId);
+
+    // First person to join becomes the room owner.
+    if (!room.ownerId || (room.participants[room.ownerId] && !room.participants[room.ownerId].isConnected)) {
+      room.ownerId = socket.id;
+    }
 
     // Room name is optional and treated as room-level metadata.
     if (!room.roomName && typeof roomName === 'string' && roomName.trim()) {
@@ -137,6 +144,7 @@ io.on('connection', (socket) => {
   socket.on('reveal_votes', () => {
     if (!currentRoomId || !rooms[currentRoomId]) return;
     const room = rooms[currentRoomId];
+    if (room.ownerId !== socket.id) return; // owner only
     room.revealed = true;
 
     // Save to history on reveal (only once per round)
@@ -159,6 +167,7 @@ io.on('connection', (socket) => {
   socket.on('reset_round', () => {
     if (!currentRoomId || !rooms[currentRoomId]) return;
     const room = rooms[currentRoomId];
+    if (room.ownerId !== socket.id) return; // owner only
     // Reset board — history already saved at reveal time
     room.revealed = false;
     room.savedThisRound = false;
@@ -200,15 +209,20 @@ io.on('connection', (socket) => {
 
   socket.on('disconnect', () => {
     if (currentRoomId && rooms[currentRoomId]?.participants[socket.id]) {
-      delete rooms[currentRoomId].participants[socket.id];
-      if (Object.keys(rooms[currentRoomId].participants).length === 0) {
+      const room = rooms[currentRoomId];
+      delete room.participants[socket.id];
+      // Hand ownership to the longest-joined remaining participant.
+      if (room.ownerId === socket.id) {
+        room.ownerId = Object.keys(room.participants)[0] || null;
+      }
+      if (Object.keys(room.participants).length === 0) {
         setTimeout(() => {
           if (rooms[currentRoomId] && Object.keys(rooms[currentRoomId].participants).length === 0) {
             delete rooms[currentRoomId];
           }
         }, 3600000);
       } else {
-        io.to(currentRoomId).emit('room_state', sanitizeRoomState(rooms[currentRoomId]));
+        io.to(currentRoomId).emit('room_state', sanitizeRoomState(room));
       }
     }
   });
